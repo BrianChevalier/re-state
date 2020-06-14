@@ -1,6 +1,5 @@
 (ns structpy.core
-  (:require [clojure.core.matrix :as m])
-  (:require [clojure.core.matrix.operators :as mx]))
+  (:require [clojure.core.matrix :as m]))
 
 
 (defn Material
@@ -8,15 +7,23 @@
   [E]
   {:E E})
 
+(defn Generic-Section
+  [A]
+  {:Area A
+   :type :Generic-Section})
+
 (defn Circle
   [radius]
   {:type :Circle
    :radius radius})
 
-(defn area
-  [circle]
-  (* (. Math PI)
-     (Math/pow (:radius circle) 2)))
+(defmulti area :type)
+
+(defmethod area :Generic-Section [shape]
+  (:Area shape))
+
+(defmethod area :Circle [circle]
+  (* Math/PI (:radius circle) (:radius circle)))
 
 ;; NODE
 (defn Node
@@ -87,22 +94,13 @@
   (let [T (transform elem)]
     (-> (m/transpose T) ; thread first. this becomes first argument of next one
         (m/mmul (klocal elem))
-        (m/mmul T)))) 
+        (m/mmul T))))
 
-(defn Truss 
-  [nodes elements]
-  {:nodes nodes
+(defn Truss
+  [node-numbers elements]
+  {:node-numbers node-numbers
    :elements elements
    :type :Truss})
-
-(def a (Node 0 0 :fixity :pin))
-(def b (Node 1 1))
-(def c (Node 2 0 :fixity :pin))
-
-(def node-numbers
-  {(:id a) 0
-   (:id b) 1
-   (:id c) 2})
 
 (defn DoF
   "Return the degree of freedom numbering for an element"
@@ -110,17 +108,12 @@
   (let [start-number (get numbering (-> elem :SN :id))
         end-number (get numbering (-> elem :EN :id))
         nDoFPerNode 2]
-    (concat 
+    (concat
      (for [i (range nDoFPerNode)]
        (+ (* nDoFPerNode start-number) i))
      (for [i (range nDoFPerNode)]
        (+ (* nDoFPerNode end-number) i)))))
 
-(def elements 
-  [(Element a b (Material 29000) (Circle 1))
-   (Element b c (Material 29000) (Circle 1))])
-
-(def truss (Truss node-numbers elements))
 
 (defn ix [a]
   (for [i a j a] [i j]))
@@ -134,39 +127,19 @@
    m
    pairs))
 
-(comment
-  (assemble
-   (m/zero-array [10 10])
-   #{[0 0] [0 1] [1 1] [1 0]}
-   (fn [i j value] (+ value 200))))
-
-(defn K 
+(defn K
   "Create the global structural stiffness matrix"
   [truss]
-  (let [nDoF (* 2 (count (:nodes truss)))
+  (let [nDoF (* 2 (count (:node-numbers truss)))
         numbering (:node-numbers truss)
         elements (:elements truss)]
     (reduce
      (fn [K elem]
-       (let [pairs (ix (DoF elements numbering))
+       (let [pairs (ix (DoF elem numbering))
+             [offset-i offset-j] (first pairs) ;; assume first pair is top-left element in matrix
              value (kglobal elem)]
-         (assemble K pairs (fn [i j v] (+ value v)))))
+         (assemble K pairs
+                   (fn [i j v]
+                     (+ v (m/mget value (- i offset-i) (- j offset-j)))))))
      (m/zero-array [nDoF nDoF])
-elements)))
-
-(defn K2
-  "Create the global structural stiffness matrix"
-  [truss]
-  (let [nDoF (* 2 (count (:nodes truss)))
-        numbering (:node-numbers truss)
-        elements (:elements truss)]
-    (reduce
-     (fn [K elem]
-       (let [pairs (ix (DoF elements numbering))
-             value (kglobal elem)]
-         (mx/+= (submatrix K) (kglobal elem) )))
-     (m/mutable (m/zero-array [nDoF nDoF]))
      elements)))
-
-
-

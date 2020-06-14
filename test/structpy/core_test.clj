@@ -1,20 +1,32 @@
 (ns structpy.core-test
-  (:require [clojure.test :refer :all]
-            [structpy.core :as sp]))
+  (:require [clojure.test :refer [deftest is]]
+            [structpy.core :as s]
+            [clojure.core.matrix :as m]))
 
-(deftest a-test
-  (testing "Test node creation"
-    (is (sp/Node 0 0) 
-        {:x 0 :y 0 :type :Node :fixity :free})))
+(def a (s/Node 0 0 :fixity :pin))
+(def b (s/Node 3 4))
+(def c (s/Node 6 0 :fixity :pin))
 
-(def elem
-  (sp/Element
-   (sp/Node 0 0 :fixity :pin)
-   (sp/Node 1 0 :fixity :pin)
-   (sp/Material 29000)
-   (sp/Circle 1)))
+(def node-numbers
+  {(:id a) 0
+   (:id b) 1
+   (:id c) 2})
 
-(deftest len-test
-  (testing ""
-    (is (= 1.0 (sp/length elem)))))
+(def elements
+  [(s/Element a b (s/Material 200e9) (s/Generic-Section 0.01))
+   (s/Element b c (s/Material 200e9) (s/Generic-Section 0.01))])
 
+(def truss (s/Truss node-numbers elements))
+
+(def expected-result
+  (m/mmul 4 1e8
+          [[0.36 0.48 -0.36 -0.48 0 0]
+           [0.48 0.64 -0.48 -0.64 0 0]
+           [-0.36 -0.48 0.72 0 -0.36 0.48]
+           [-0.48 -0.64 0 1.28 0.48 -0.64]
+           [0 0 -0.36 0.48 0.36 -0.48]
+           [0 0 0.48 -0.64 -0.48 0.64]]))
+
+(deftest structural-test-6
+  (let [result (s/K truss)]
+    (is (m/equals expected-result result 0.001))))
