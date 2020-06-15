@@ -1,6 +1,8 @@
 (ns structpy.core
-  (:require [clojure.core.matrix :as m]))
+  (:require [clojure.core.matrix :as m]
+            [clojure.core.matrix.linear :as lin]))
 
+(m/set-current-implementation :vectorz)
 
 (defn Material
   "Material with Young's Modulus, E"
@@ -84,9 +86,10 @@
 (defn transform
   "Truss Element local-to-global transformation matrix"
   [elem]
-  (let [[l m] (unit-vector elem)]
-    [[l m 0 0]
-     [0 0 l m]]))
+  (let [vec (unit-vector elem)
+        [l m] [(m/mget vec 0) (m/mget vec 1)]]
+     [[l m 0 0]
+      [0 0 l m]]))
 
 (defn kglobal
   "The global element stiffness matrix"
@@ -96,9 +99,18 @@
         (m/mmul (klocal elem))
         (m/mmul T))))
 
+(defn get-nodes
+  "Look up all of the nodes from the elements"
+  [elems]
+  (->> elems
+       (mapcat (juxt :SN :EN))
+       (map (juxt :id identity))
+       (into {})))
+
 (defn Truss
   [node-numbers elements]
   {:node-numbers node-numbers
+   :nodes (get-nodes elements)
    :elements elements
    :type :Truss})
 
@@ -142,4 +154,77 @@
                    (fn [i j v]
                      (+ v (m/mget value (- i offset-i) (- j offset-j)))))))
      (m/zero-array [nDoF nDoF])
-     elements)))
+elements)))
+
+
+(defn loading->vector [structure loading]
+  (let [{:keys [node-numbers]} structure]
+    (->> (sort-by second node-numbers)
+         (map first) ;list of pairs to list of ids
+         (map loading)
+         (mapcat (juxt :x :y)))))
+
+
+
+(defn structure-BC 
+  "Get the structural boundary conditions"
+  [structure]
+  (let [{:keys [node-numbers nodes]} structure]
+    (->> (sort-by second node-numbers)
+         (map first) ;list of pairs to list of ids
+         (map nodes)
+         (map :fixity)
+         (mapcat fixities))))
+
+(defn free-DoF
+  "Get the free degree of freedom indicies"
+  [structure]
+  (let [DoF (structure-BC structure)]
+   (filter (fn [x] (not (zero? x)))
+           (map * DoF (range 0 (count DoF))))))
+
+(defn reduced-K
+  "Reduce the structure stiffness matrix based on free DoF"
+  [structure]
+  (let [freeDoF (free-DoF structure)]
+    (m/array (m/select (K structure) freeDoF freeDoF))))
+
+(defn reduced-F
+  "Reduce F"
+  [loading freeDoF]
+  (m/select loading freeDoF))
+
+(defn solve
+  "Solve structural system"
+ [structure, loading]
+  (let [reducedF (reduced-F (loading->vector structure loading) (free-DoF structure)) 
+        reducedK (reduced-K structure)]
+   (lin/solve reducedK reducedF)))
+
+
+
+
+
+
+
+
+;; Testing variables
+(def a (Node 0 0 :fixity :pin))
+(def b (Node 3 4))
+(def c (Node 6 0 :fixity :pin))
+
+(def node-numbers
+  {(:id a) 0
+   (:id b) 1
+   (:id c) 2})
+
+(def elements
+  [(Element a b (Material 200e9) (Generic-Section 0.01))
+   (Element b c (Material 200e9) (Generic-Section 0.01))])
+
+(def truss (Truss node-numbers elements))
+
+(def loading
+  {(:id a) {:x 0 :y 0}
+   (:id b) {:x 8660 :y 5000}
+   (:id c) {:x 0 :y 0}})

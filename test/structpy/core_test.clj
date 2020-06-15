@@ -3,6 +3,7 @@
             [structpy.core :as s]
             [clojure.core.matrix :as m]))
 
+;; Known structure solution
 (def a (s/Node 0 0 :fixity :pin))
 (def b (s/Node 3 4))
 (def c (s/Node 6 0 :fixity :pin))
@@ -18,6 +19,11 @@
 
 (def truss (s/Truss node-numbers elements))
 
+(def loading
+  {(:id a) {:x 0 :y 0}
+   (:id b) {:x 8660 :y 5000}
+   (:id c) {:x 0 :y 0}})
+
 (def expected-result
   (m/mmul 4 1e8
           [[0.36 0.48 -0.36 -0.48 0 0]
@@ -27,6 +33,10 @@
            [0 0 -0.36 0.48 0.36 -0.48]
            [0 0 0.48 -0.64 -0.48 0.64]]))
 
+(def disp [3.00694e-5 9.76563e-6])
+
 (deftest structural-test-6
   (let [result (s/K truss)]
-    (is (m/equals expected-result result 0.001))))
+    (is (m/equals expected-result result 0.00001))
+    (is (m/equals disp (s/solve truss loading) 0.00001))))
+
