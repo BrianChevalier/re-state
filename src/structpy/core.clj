@@ -38,17 +38,17 @@
    :id (gensym)})
 
 (def fixities
-  "Fixities"
+  "Fixities for planar truss node"
   {:free [1 1]
    :pin [0 0]
    :xroller [1 0]
    :yroller [0 1]})
 
-(defn boundary-conditions
-  "Look up boundary condition knows/unknowns"
-  [node]
-  (get fixities
-       (:fixity node)))
+;; (defn boundary-conditions
+;;   "Look up boundary condition knows/unknowns"
+;;   [node]
+;;   (get fixities
+;;        (:fixity node)))
 
 ;; ELEMENT
 (defn Element
@@ -56,7 +56,9 @@
   [SN EN mat xs]
   {:type :Element
    :SN SN; (2SN.n + 0, 2SN.n + 1) (2EN.n + 0, 2EN.n + 1)
-   :EN EN ; 
+   :EN EN
+   :SN-id (:id SN)
+   :EN-id (:id EN)
    :mat mat
    :xs xs})
 
@@ -75,13 +77,16 @@
 (defn stiffness
   "Truss Element axial stiffness"
   [elem]
-  (/ (* (area (get elem :xs)) (get-in elem [:mat :E]))
+  (/ (* (area (get elem :xs)) 
+        (get-in elem [:mat :E]))
      (m/magnitude (vect elem))))
 
 (defn klocal
   "Truss Local element stiffness matrix"
   [elem]
-  (m/mmul (stiffness elem) [[1 -1] [-1 1]]))
+  (m/mmul (stiffness elem) 
+          [[1 -1] 
+           [-1 1]]))
 
 (defn transform
   "Truss Element local-to-global transformation matrix"
@@ -99,6 +104,7 @@
         (m/mmul (klocal elem))
         (m/mmul T))))
 
+;; TRUSS
 (defn get-nodes
   "Look up all of the nodes from the elements"
   [elems]
@@ -154,7 +160,7 @@
                    (fn [i j v]
                      (+ v (m/mget value (- i offset-i) (- j offset-j)))))))
      (m/zero-array [nDoF nDoF])
-elements)))
+     elements)))
 
 
 (defn loading->vector [structure loading]
@@ -196,15 +202,27 @@ elements)))
 
 (defn solve
   "Solve structural system"
- [structure, loading]
+ [structure loading]
   (let [reducedF (reduced-F (loading->vector structure loading) (free-DoF structure)) 
         reducedK (reduced-K structure)]
    (lin/solve reducedK reducedF)))
 
+(defn global-displacement
+  "Get the global nodal displacement vector"
+  [structure loading]
+  (m/set-selection (structure-BC structure) ; boundary condition array
+                   (free-DoF structure) ;idicies of the selection
+                   (solve structure loading))) ;what to set the selection to
 
-
-
-
+(defn axial-force
+  "Compute the element local force"
+  [elem numbering displacements]
+  (let [vec (unit-vector elem)
+        [l m] [(m/mget vec 0) (m/mget vec 1)]]
+    (m/mmul 
+     (stiffness elem) 
+     [[l m (- l) (- m)]] 
+     (end-displacements elem numbering displacements))))
 
 
 
