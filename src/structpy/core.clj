@@ -1,6 +1,7 @@
 (ns structpy.core
   (:require [clojure.core.matrix :as m]
-            [clojure.core.matrix.linear :as lin]))
+            [clojure.core.matrix.linear :as lin]
+            [structpy.cross-sections :as XS]))
 
 (m/set-current-implementation :vectorz)
 
@@ -8,24 +9,6 @@
   "Material with Young's Modulus, E"
   [E]
   {:E E})
-
-(defn Generic-Section
-  [A]
-  {:Area A
-   :type :Generic-Section})
-
-(defn Circle
-  [radius]
-  {:type :Circle
-   :radius radius})
-
-(defmulti area :type)
-
-(defmethod area :Generic-Section [shape]
-  (:Area shape))
-
-(defmethod area :Circle [circle]
-  (* Math/PI (:radius circle) (:radius circle)))
 
 ;; NODE
 (defn Node
@@ -37,12 +20,21 @@
    :fixity fixity
    :id (gensym)})
 
-(def fixities
-  "Fixities for planar truss node"
-  {:free [1 1]
-   :pin [0 0]
-   :xroller [1 0]
-   :yroller [0 1]})
+(defn fixities
+  "Get fixity conditions for node based on node type and fixity"
+  [node-type fixity]
+  (-> {:Node ;x, y
+       {:free [1 1]
+        :pin [0 0]
+        :xroller [1 0]
+        :yroller [0 1]}
+       :NodeSpace; x, y z
+       {:free [1 1 1]
+        :pin [0 0 0]}}
+      node-type
+      fixity))
+
+
 
 ;; (defn boundary-conditions
 ;;   "Look up boundary condition knows/unknowns"
@@ -77,7 +69,7 @@
 (defn stiffness
   "Truss Element axial stiffness"
   [elem]
-  (/ (* (area (get elem :xs)) 
+  (/ (* (XS/area (get elem :xs)) 
         (get-in elem [:mat :E]))
      (m/magnitude (vect elem))))
 
@@ -89,7 +81,7 @@
            [-1 1]]))
 
 (defn transform
-  "Truss Element local-to-global transformation matrix"
+  "Truss element local-to-global transformation matrix"
   [elem]
   (let [vec (unit-vector elem)
         [l m] [(m/mget vec 0) (m/mget vec 1)]]
@@ -97,7 +89,7 @@
       [0 0 l m]]))
 
 (defn kglobal
-  "The global element stiffness matrix"
+  "Truss element stiffness matrix"
   [elem]
   (let [T (transform elem)]
     (-> (m/transpose T) ; thread first. this becomes first argument of next one
@@ -173,14 +165,14 @@
 
 
 (defn structure-BC 
-  "Get the structural boundary conditions"
+  "Get the boundary conditions for a structure"
   [structure]
   (let [{:keys [node-numbers nodes]} structure]
     (->> (sort-by second node-numbers)
          (map first) ;list of pairs to list of ids
          (map nodes)
          (map :fixity)
-         (mapcat fixities))))
+         (mapcat (partial fixities :Node)))))
 
 (defn free-DoF
   "Get the free degree of freedom indicies"
@@ -215,14 +207,14 @@
                    (solve structure loading))) ;what to set the selection to
 
 (defn axial-force
-  "Compute the element local force"
+  "Compute the element local axial force"
   [elem numbering displacements]
   (let [vec (unit-vector elem)
         [l m] [(m/mget vec 0) (m/mget vec 1)]]
     (m/mmul 
      (stiffness elem) 
      [[l m (- l) (- m)]] 
-     (end-displacements elem numbering displacements))))
+     (m/select displacements (DoF elem numbering)))))
 
 
 
@@ -237,8 +229,8 @@
    (:id c) 2})
 
 (def elements
-  [(Element a b (Material 200e9) (Generic-Section 0.01))
-   (Element b c (Material 200e9) (Generic-Section 0.01))])
+  [(Element a b (Material 200e9) (XS/Generic-Section 0.01))
+   (Element b c (Material 200e9) (XS/Generic-Section 0.01))])
 
 (def truss (Truss node-numbers elements))
 

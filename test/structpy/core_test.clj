@@ -1,7 +1,8 @@
 (ns structpy.core-test
   (:require [clojure.test :refer [deftest is]]
             [structpy.core :as s]
-            [clojure.core.matrix :as m]))
+            [clojure.core.matrix :as m]
+            [structpy.cross-sections :as XS]))
 
 ;; Known structure solution
 (def a (s/Node 0 0 :fixity :pin))
@@ -14,8 +15,8 @@
    (:id c) 2})
 
 (def elements
-  [(s/Element a b (s/Material 200e9) (s/Generic-Section 0.01))
-   (s/Element b c (s/Material 200e9) (s/Generic-Section 0.01))])
+  [(s/Element a b (s/Material 200e9) (XS/Generic-Section 0.01))
+   (s/Element b c (s/Material 200e9) (XS/Generic-Section 0.01))])
 
 (def truss (s/Truss node-numbers elements))
 
