@@ -5,6 +5,7 @@
 
 (m/set-current-implementation :vectorz)
 
+
 (defn Material
   "Material with Young's Modulus, E"
   [E]
@@ -13,12 +14,31 @@
 ;; NODE
 (defn Node
   "Create a new Node map"
-  [x y & {:keys [fixity] :or {fixity :free}}]
-  {:type :Node
-   :x x
-   :y y
-   :fixity fixity
-   :id (gensym)})
+  ([x y & {:keys [z fixity] 
+           :or {z nil fixity :free}}]
+   {:type :Node
+    :dimm (if (nil? z) :2D :3D)
+    :x x
+    :y y
+    :z z
+    :fixity fixity
+    :id (gensym)}))
+
+(def DoF-names
+  "The DoF naming for various structure types"
+  { :2D {:Truss [:x :y] 
+        :Frame [:x :y :z]} 
+  :3D {:Truss [:x :y :θz] 
+       :Frame [:x :y :z :θz :θy :θx]}})
+
+{:2D 
+ {:Truss 
+  {:free [1 1]
+   :pin [0 0]}
+  :Frame {:free [1 1 1]}}
+ :3D {:Truss
+      {:free [1 1 1]
+       :pin [0 0]}}}
 
 (defn fixities
   "Get fixity conditions for node based on node type and fixity"
@@ -28,27 +48,38 @@
         :pin [0 0]
         :xroller [1 0]
         :yroller [0 1]}
-       :NodeSpace; x, y z
+       :NodeSpace ; x, y z
        {:free [1 1 1]
         :pin [0 0 0]}}
       node-type
       fixity))
 
+(defn ndof-per-node
+  "Look up number of degrees of freedom per node"
+  [node]
+  (->
+   node
+   :type
+   {:Node 2
+    :Node-Space-Truss 3
+    :Node-Planar-Frame 3
+    :Node-Space-Frame 6}))
 
+; I want this to be just a function of a node
+(defn node-DoF
+  "Return the degree of freedom numbering for a node"
+  [nDoFPerNode id]
+  (for [i (range nDoFPerNode)]
+    (+ (* nDoFPerNode id) i)))
 
-;; (defn boundary-conditions
-;;   "Look up boundary condition knows/unknowns"
-;;   [node]
-;;   (get fixities
-;;        (:fixity node)))
 
 ;; ELEMENT
 (defn Element
   "Create a new Element map"
   [SN EN mat xs]
   {:type :Element
-   :SN SN; (2SN.n + 0, 2SN.n + 1) (2EN.n + 0, 2EN.n + 1)
-   :EN EN
+   :SN nil ; (2SN.n + 0, 2SN.n + 1) (2EN.n + 0, 2EN.n + 1)
+   :EN nil
    :SN-id (:id SN)
    :EN-id (:id EN)
    :mat mat
@@ -89,44 +120,62 @@
       [0 0 l m]]))
 
 (defn kglobal
-  "Truss element stiffness matrix"
+  "Generic element stiffness matrix"
   [elem]
   (let [T (transform elem)]
     (-> (m/transpose T) ; thread first. this becomes first argument of next one
         (m/mmul (klocal elem))
         (m/mmul T))))
 
-;; TRUSS
-(defn get-nodes
-  "Look up all of the nodes from the elements"
-  [elems]
-  (->> elems
-       (mapcat (juxt :SN :EN))
-       (map (juxt :id identity))
-       (into {})))
 
-(defn Truss
-  [node-numbers elements]
-  {:node-numbers node-numbers
-   :nodes (get-nodes elements)
-   :elements elements
-   :type :Truss})
+;; (defn get-nodes
+;;   "Look up all of the nodes from the elements"
+;;   [elems]
+;;   (->> elems
+;;        (mapcat (juxt :SN :EN))
+;;        (map (juxt :id identity))
+;;        (into {})))
 
 (defn DoF
   "Return the degree of freedom numbering for an element"
   [elem numbering]
-  (let [start-number (get numbering (-> elem :SN :id))
-        end-number (get numbering (-> elem :EN :id))
+  (let [start-number (get numbering (-> elem :SN-id))
+        end-number (get numbering (-> elem :EN-id))
         nDoFPerNode 2]
     (concat
-     (for [i (range nDoFPerNode)]
-       (+ (* nDoFPerNode start-number) i))
-     (for [i (range nDoFPerNode)]
-       (+ (* nDoFPerNode end-number) i)))))
+     (node-DoF nDoFPerNode start-number)
+     (node-DoF nDoFPerNode end-number))))
+
+(defn axial-force
+   "Compute the element local axial force"
+   [elem numbering displacements]
+   (let [vec (unit-vector elem)
+         [l m] [(m/mget vec 0) (m/mget vec 1)]]
+     (m/mmul
+      (stiffness elem)
+      [[l m (- l) (- m)]]
+      (m/select displacements (DoF elem numbering)))))
 
 
-(defn ix [a]
-  (for [i a j a] [i j]))
+ (defn get-node-numbers
+   [nodes]
+   (->> nodes
+        (map-indexed 
+         (fn [index node] {(:id node) index}))
+        vec
+        (into {})))
+
+
+;; TRUSS
+(defn Truss
+  [nodes elements]
+  {:node-numbers (get-node-numbers nodes)
+  :nodes (into {} (map (juxt :id identity) nodes))
+  :elements elements
+  :type :Truss})
+
+ (defn ix [a]
+   (for [i a j a] [i j]))
 
 (defn assemble
   "Create a matrix the same size as m, returning a matrix of the same size"
@@ -136,6 +185,13 @@
      (m/mset m i j (f i j (m/mget m i j))))
    m
    pairs))
+
+(defn with-nodes
+  "Look up and insert nodes into element from the truss"
+  [elem truss]
+  (assoc elem 
+         :SN (get (:nodes truss) (:SN-id elem)) 
+         :EN (get (:nodes truss) (:EN-id elem))))
 
 (defn K
   "Create the global structural stiffness matrix"
@@ -147,7 +203,7 @@
      (fn [K elem]
        (let [pairs (ix (DoF elem numbering))
              [offset-i offset-j] (first pairs) ;; assume first pair is top-left element in matrix
-             value (kglobal elem)]
+             value (kglobal (with-nodes elem truss))]
          (assemble K pairs
                    (fn [i j v]
                      (+ v (m/mget value (- i offset-i) (- j offset-j)))))))
@@ -155,7 +211,8 @@
      elements)))
 
 
-(defn loading->vector [structure loading]
+(defn loading->vector 
+  [structure loading]
   (let [{:keys [node-numbers]} structure]
     (->> (sort-by second node-numbers)
          (map first) ;list of pairs to list of ids
@@ -206,15 +263,6 @@
                    (free-DoF structure) ;idicies of the selection
                    (solve structure loading))) ;what to set the selection to
 
-(defn axial-force
-  "Compute the element local axial force"
-  [elem numbering displacements]
-  (let [vec (unit-vector elem)
-        [l m] [(m/mget vec 0) (m/mget vec 1)]]
-    (m/mmul 
-     (stiffness elem) 
-     [[l m (- l) (- m)]] 
-     (m/select displacements (DoF elem numbering)))))
 
 
 
@@ -222,6 +270,8 @@
 (def a (Node 0 0 :fixity :pin))
 (def b (Node 3 4))
 (def c (Node 6 0 :fixity :pin))
+
+(def nodes [a b c])
 
 (def node-numbers
   {(:id a) 0
@@ -232,7 +282,7 @@
   [(Element a b (Material 200e9) (XS/Generic-Section 0.01))
    (Element b c (Material 200e9) (XS/Generic-Section 0.01))])
 
-(def truss (Truss node-numbers elements))
+(def truss (Truss nodes elements))
 
 (def loading
   {(:id a) {:x 0 :y 0}
