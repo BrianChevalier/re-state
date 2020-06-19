@@ -2,23 +2,21 @@
   (:require [clojure.test :refer [deftest is]]
             [structpy.core :as s]
             [clojure.core.matrix :as m]
-            [structpy.cross-sections :as XS]))
+            [structpy.cross-sections :as XS]
+            [structpy.element :as el]
+            [structpy.node :as nd]))
 
 ;; Known structure solution
-(def a (s/Node 0 0 :fixity :pin))
-(def b (s/Node 3 4))
-(def c (s/Node 6 0 :fixity :pin))
+(def a (nd/Node 0 0 :fixity :pin))
+(def b (nd/Node 3 4))
+(def c (nd/Node 6 0 :fixity :pin))
 
-(def node-numbers
-  {(:id a) 0
-   (:id b) 1
-   (:id c) 2})
 
 (def elements
-  [(s/Element a b (s/Material 200e9) (XS/Generic-Section 0.01))
-   (s/Element b c (s/Material 200e9) (XS/Generic-Section 0.01))])
+  [(el/Element a b (s/Material 200e9) (XS/Generic-Section 0.01))
+   (el/Element b c (s/Material 200e9) (XS/Generic-Section 0.01))])
 
-(def truss (s/Truss node-numbers elements))
+(def truss (s/Truss [a b c] elements))
 
 (def loading
   {(:id a) {:x 0 :y 0}
