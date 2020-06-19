@@ -47,21 +47,22 @@
   (let [nodes (:nodes structure)]
    (* (nd/nDoF (get nodes 0)) (count nodes))))
 
-(defn vecSum
+(defn add-kglobal
+  "Take in K and element and add kglobal to K and return it."
   [K elem]
-  (m/set-selection K (el/DoF elem) (el/DoF elem)
-   (m/add (m/matrix (m/select K (el/DoF elem) (el/DoF elem)))
-      (m/matrix (el/kglobal elem)))))
+  (let [dof (el/DoF elem)]
+   (m/set-selection K dof dof
+                    (m/add (m/matrix (m/select K dof dof))
+                           (m/matrix (el/kglobal elem))))))
 
 (defn K
   "Assemble the structural stiffness matrix"
   [structure]
    (let [nDoF (nDoF structure)
          elements (map (fn [elem] (with-nodes elem structure)) (:elements structure))]
-     (reduce
-      vecSum
-      (m/zero-array [nDoF nDoF])
-      elements)))
+     (reduce add-kglobal
+             (m/zero-array [nDoF nDoF])
+             elements)))
 
 (defn loading->vector 
   [structure loading]

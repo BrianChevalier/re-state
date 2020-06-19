@@ -25,8 +25,17 @@
 (defmethod area :Generic-Section [shape]
   (:Area shape))
 
-(defmethod area :Circle [circle]
+(defmethod area :Circle 
+  [circle]
   (* Math/PI (:radius circle) (:radius circle)))
 
-(defmethod area :Square [square]
+(defmethod area :Square 
+  [square]
   (* (:side square) (:side square)))
+
+;; Compute moment of inertia for each shape
+(defmulti Ix :type)
+
+(defmethod Ix :Generic-Section 
+  [shape]
+  (:Ix shape))

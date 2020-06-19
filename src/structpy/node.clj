@@ -1,6 +1,5 @@
 (ns structpy.node
-  (:require [clojure.core.matrix :as m]
-            [clojure.core.matrix.linear :as lin]))
+  (:require [clojure.core.matrix :as m]))
 
 (defn Node
   "Create a new Node map"
@@ -45,6 +44,27 @@
     :ndof 6
     :free [1 1 1 1 1 1]
     :fixed [0 0 0 0 0 0]}})
+
+(defmulti sub
+  "Subtract two nodes, creates a vector pointing from SN->EN as array.
+   Dispatches based on node dimensions (:2D or :3D)"
+  (fn [EN SN] 
+    (if (= (:dimm EN) (:dimm SN)) 
+      (:dimm SN)
+      (throw (AssertionError. "Mismatching dimmensions")))))
+
+(defmethod sub :2D
+  [EN SN]
+  (m/array
+   [(- (:x EN) (:x SN))
+    (- (:y EN) (:y SN))]))
+
+(defmethod sub :3D
+  [EN SN]
+  (m/array
+   [(- (:x EN) (:x SN))
+    (- (:y EN) (:y SN))
+    (- (:z EN) (:z SN))]))
 
 (defn get-fixity
   "Get the fixity array for a node depending on 

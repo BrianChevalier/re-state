@@ -17,9 +17,9 @@
 
 (def test-elem 
   {:type :Element
-  :SN {:x 0 :y 0 :type :Node :index 0 :dimm :2D :structure-type :Truss}
-  :EN {:x 1 :y 0 :type :Node :index 1 :dimm :2D :structure-type :Truss}
-   :xs {:type :Generic-Section :Area 1}
+  :SN {:x 0 :y 0 :type :Node :index 0 :dimm :2D :structure-type :Frame}
+  :EN {:x 1 :y 0 :type :Node :index 1 :dimm :2D :structure-type :Frame}
+   :xs {:type :Generic-Section :Area 1 :Ix 1}
    :mat {:E 29000}})
 
 (defn DoF
@@ -32,21 +32,24 @@
 (defn vect
   "The vector pointing along an element"
   [elem]
-  (m/array
-   [(- (get-in elem [:EN :x]) (get-in elem [:SN :x]))
-    (- (get-in elem [:EN :y]) (get-in elem [:SN :y]))]))
+  (nd/sub (:EN elem) (:SN elem)))
+
+(defn length
+  "Compute the length of an element"
+  [elem]
+  (m/magnitude (vect elem)))
 
 (defn unit-vector
   "The unit vector along an element"
   [elem]
-  (m/normalise (vect elem)))
+  (m/div (vect elem) (length elem)))
 
 (defn stiffness
   "Truss Element axial stiffness"
   [elem]
-  (/ (* (XS/area (get elem :xs))
-        (get-in elem [:mat :E]))
-     (m/magnitude (vect elem))))
+  (/ (* (XS/area (:xs elem))
+        (-> elem :mat :E))
+     (length elem)))
 
 (defn dispatch
   "Dispatch based on element dimmension and structure type"
@@ -58,11 +61,30 @@
   dispatch)
 
 (defmethod klocal [:2D :Truss]
-  ;"Truss Local element stiffness matrix"
   [elem]
   (m/mmul (stiffness elem)
           [[1 -1]
            [-1 1]]))
+
+(defmethod klocal [:2D :Frame]
+  [elem]
+  (let [L (length elem)
+        A (XS/area (:xs elem))
+        E (-> elem :mat :E)
+        I (XS/Ix (:xs elem))
+        AE (* A E)
+        EI (* E I)
+        a (/ AE L)
+        b (/ EI L)
+        c (/ EI (* L L))
+        d (/ EI (* L L L))]
+   [[a     0         0        (- a)  0           0      ]
+    [0     (* 12 d)  (* 6 c)  0      (* -12 d) (* 6 c)  ]
+    [0     (* 6 c)   (* 4 b)  0      (- 6 c)   (* 2 b)  ]
+    [(- a) 0         0        a      0         0        ]
+    [0     (* -12 d) (* -6 c) 0      (* 12 d)  (* -6 c) ]
+    [0     (* 6 c)   (* 2 b)  0      (* -6 c)  (* 4 b)  ]]))
+
 
 (defmulti transform
   "Truss element local-to-global transformation matrix"
@@ -74,6 +96,18 @@
         [l m] [(m/mget vec 0) (m/mget vec 1)]]
     [[l m 0 0]
      [0 0 l m]]))
+
+(defmethod transform [:2D :Frame]
+  [elem]
+    (let [vec (unit-vector elem)
+        [l m] [(m/mget vec 0) (m/mget vec 1)]]
+      [[l     m 0 0     0 0]
+       [(- m) l 0 0     0 0]
+       [0     0 1 0     0 0]
+       [0     0 0 l     m 0]
+       [0     0 0 (- m) l 0]
+       [0     0 0 0     0 1]]))
+
 
 (defn kglobal
   "Generic element stiffness matrix"
