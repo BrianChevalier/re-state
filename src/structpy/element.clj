@@ -66,6 +66,24 @@
           [[1 -1]
            [-1 1]]))
 
+(defmethod klocal [:3D :Truss]
+  [elem]
+  (m/mmul (stiffness elem)
+          [[1 -1]
+           [-1 1]]))
+
+(defmethod klocal [:2D :Beam]
+  [elem]
+  (let [L (length elem)
+        E (-> elem :mat :E)
+        I (XS/Ix (:xs elem))
+        EI (* E I)]
+    (m/mul (/ EI (* L L L))
+           [[12      (* 6 L)   (- 12)   (* 6 L)]
+            [(* 6 L) (* 4 L L) (* -6 L) (* 2 L L)]
+            [(- 12)  (* -6 L)  12       (* -6 L)]
+            [(* 6 L) (* 2 L L) (* -6 L) (* 4 L L)]])))
+
 (defmethod klocal [:2D :Frame]
   [elem]
   (let [L (length elem)
@@ -108,6 +126,12 @@
        [0     0 0 (- m) l 0]
        [0     0 0 0     0 1]]))
 
+(defmethod transform [:3D :Truss]
+  [elem]
+  (let [vec (unit-vector elem)
+        [l m n] [(m/mget vec 0) (m/mget vec 1) (m/mget vec 2)]]
+    [[l m n  0 0 0]
+     [0 0 0  l m n]]))
 
 (defn kglobal
   "Generic element stiffness matrix"

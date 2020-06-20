@@ -20,13 +20,23 @@
   {:2D
    {:Truss
     {:names [:x :y]
+     :force-names [:Px :Py]
      :ndof 2
      :free [1 1]
      :pin [0 0]
      :xroller [1 0]
      :yroller [0 1]}
+    :Beam
+    {:names [:y :θz]
+     :force-names [:Py :Mz]
+     :ndof 2
+     :free [1 1]
+     :pin [0 1]
+     :fixed [0 0]
+     :xroller [0 1]}
     :Frame
     {:names [:x :y :θz]
+     :force-names [:Px :Py :Mz]
      :ndof 3
      :free [1 1 1]
      :pin [0 0 1]

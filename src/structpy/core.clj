@@ -14,57 +14,57 @@
   [E]
   {:E E})
 
- (defn get-node-numbers
-   [nodes]
-   (->> nodes
-        (map-indexed 
-         (fn [index node] {(:id node) index}))
-        vec
-        (into {})))
+(defn get-node-numbers
+  [nodes]
+  (->> nodes
+       (map-indexed
+        (fn [index node] {(:id node) index}))
+       vec
+       (into {})))
 
 ;; TRUSS
 (defn Truss
   [nodes elements]
   {:node-numbers (get-node-numbers nodes)
-  :nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
-  :elements elements
-  :type :Truss})
+   :nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
+   :elements elements
+   :type :Truss})
 
 (defn nodes-by-uuid
   [nodes]
   (into {} (map (juxt :id identity) nodes)))
- 
+
 (defn with-nodes
   "Look up and insert nodes into element from the truss"
   [elem truss]
-  (assoc elem 
-         :SN (get (nodes-by-uuid (:nodes truss)) (:SN-id elem)) 
+  (assoc elem
+         :SN (get (nodes-by-uuid (:nodes truss)) (:SN-id elem))
          :EN (get (nodes-by-uuid (:nodes truss)) (:EN-id elem))))
 
 (defn nDoF
   "Count the number of degrees of freedom for a structure"
   [structure]
   (let [nodes (:nodes structure)]
-   (* (nd/nDoF (get nodes 0)) (count nodes))))
+    (* (nd/nDoF (get nodes 0)) (count nodes))))
 
 (defn add-kglobal
   "Take in K and element and add kglobal to K and return it."
   [K elem]
   (let [dof (el/DoF elem)]
-   (m/set-selection K dof dof
-                    (m/add (m/matrix (m/select K dof dof))
-                           (m/matrix (el/kglobal elem))))))
+    (m/set-selection K dof dof
+                     (m/add (m/matrix (m/select K dof dof))
+                            (m/matrix (el/kglobal elem))))))
 
 (defn K
   "Assemble the structural stiffness matrix"
   [structure]
-   (let [nDoF (nDoF structure)
-         elements (map (fn [elem] (with-nodes elem structure)) (:elements structure))]
-     (reduce add-kglobal
-             (m/zero-array [nDoF nDoF])
-             elements)))
+  (let [nDoF (nDoF structure)
+        elements (map (fn [elem] (with-nodes elem structure)) (:elements structure))]
+    (reduce add-kglobal
+            (m/zero-array [nDoF nDoF])
+            elements)))
 
-(defn loading->vector 
+(defn loading->vector
   [structure loading]
   (let [{:keys [node-numbers]} structure]
     (->> (sort-by second node-numbers)
@@ -72,17 +72,38 @@
          (map loading)
          (mapcat (juxt :x :y)))))
 
+(defn load-> 
+  [structure loading]
+  (let [dof-keys (-> nd/fixities (:dimm structure) (:type))]
+   (->> (:nodes structure)
+        (map :id)
+        (map loading)
+        (mapcat (apply juxt dof-keys)))))
+
+(defn element-load->nodal-loads
+  [elem loading]
+  (let [L (el/length elem)
+        L260 (/ (* L L) 60)
+        w0 (:w0 loading)
+        wL (:wL loading)
+        P0 (* (/ L 20) (+ (* 7 w0) (* 3 wL)))
+        M0 (* L260 (+ (* 3 w0) (* 2 wL)))
+        PL (* (/ L 20) (+ (* 3 w0) (* 7 wL)))
+        ML (* L260 (+ (* 2 w0) (* 3 wL)))]
+   [{(:SN-id elem) {:Px 0 :Py P0 :Mz M0}}
+    {(:EN-id elem) {:Px 0 :Py PL :Mz ML}}]))
+
 (defn boundary-conditions
   [structure]
-  (mapcat (fn [node] (nd/get-fixity node)) 
+  (mapcat (fn [node] (nd/get-fixity node))
           (get structure :nodes)))
 
 (defn free-DoF
   "Get the free degree of freedom indicies"
   [structure]
   (let [DoF (boundary-conditions structure)]
-   (filter (fn [x] (not (zero? x)))
-           (map * DoF (range 0 (count DoF))))))
+    (filter (fn [x] (not (zero? x)))
+            (map * DoF (range 0 (count DoF))))))
 
 (defn reduced-K
   "Reduce the structure stiffness matrix based on free DoF"
@@ -97,10 +118,10 @@
 
 (defn solve
   "Solve structural system"
- [structure loading]
-  (let [reducedF (reduced-F (loading->vector structure loading) (free-DoF structure)) 
+  [structure loading]
+  (let [reducedF (reduced-F (loading->vector structure loading) (free-DoF structure))
         reducedK (reduced-K structure)]
-   (lin/solve reducedK reducedF)))
+    (lin/solve reducedK reducedF)))
 
 (defn global-displacement
   "Get the global nodal displacement vector"
@@ -126,6 +147,21 @@
 (def truss (Truss nodes elements))
 
 (def loading
-  {(:id a) {:x 0 :y 0}
-   (:id b) {:x 8660 :y 5000}
-   (:id c) {:x 0 :y 0}})
+  {(:id a) {:Px 0 :Py 0}
+   (:id b) {:Px 8660 :Py 5000}
+   (:id c) {:Px 0 :Py 0}})
+
+;; {node-id 
+;;   {:type :nodal-load 
+;;    :x 
+;;    :y 
+;;    :Mz}}
+;; {element-id
+;;   {:load-type [:point :distributed [:constant :linear]]
+;;    :direction [:global-x :local-x :global-y :local-y]
+;;    :q0 :qL ;for constant or linear
+;;    :P :a (distance from SN) ;for point load
+;;    }}
+;; :direction [global-x local-x global-y local-y]
+;; :load-type [:point :distributed]
+;; 
