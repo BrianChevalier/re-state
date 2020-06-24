@@ -4,7 +4,8 @@
             [clojure.core.matrix :as m]
             [structpy.cross-sections :as XS]
             [structpy.element :as el]
-            [structpy.node :as nd]))
+            [structpy.node :as nd]
+            [structpy.loading :as ld]))
 
 ;; Known structure solution
 (def a (nd/Node 0 0 :fixity :pin))
@@ -19,9 +20,9 @@
 (def truss (s/Truss [a b c] elements))
 
 (def loading
-  {(:id a) {:x 0 :y 0}
-   (:id b) {:x 8660 :y 5000}
-   (:id c) {:x 0 :y 0}})
+  [(ld/NodalLoad (:id a) 0 0)
+   (ld/NodalLoad (:id b) 8660 5000)
+   (ld/NodalLoad (:id c) 0 0)])
 
 (def expected-result
   (m/mmul 4 1e8

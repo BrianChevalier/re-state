@@ -4,7 +4,8 @@
             [structpy.cross-sections :as XS]
             [structpy.node :as nd]
             [structpy.element :as el]
-            [clojure.pprint]))
+            [clojure.pprint]
+            [structpy.loading :as ld]))
 
 (m/set-current-implementation :vectorz)
 
@@ -30,17 +31,6 @@
    :elements elements
    :type :Truss})
 
-(defn nodes-by-uuid
-  [nodes]
-  (into {} (map (juxt :id identity) nodes)))
-
-(defn with-nodes
-  "Look up and insert nodes into element from the truss"
-  [elem truss]
-  (assoc elem
-         :SN (get (nodes-by-uuid (:nodes truss)) (:SN-id elem))
-         :EN (get (nodes-by-uuid (:nodes truss)) (:EN-id elem))))
-
 (defn nDoF
   "Count the number of degrees of freedom for a structure"
   [structure]
@@ -59,39 +49,10 @@
   "Assemble the structural stiffness matrix"
   [structure]
   (let [nDoF (nDoF structure)
-        elements (map (fn [elem] (with-nodes elem structure)) (:elements structure))]
+        elements (map (fn [elem] (el/with-nodes elem structure)) (:elements structure))]
     (reduce add-kglobal
             (m/zero-array [nDoF nDoF])
             elements)))
-
-(defn loading->vector
-  [structure loading]
-  (let [{:keys [node-numbers]} structure]
-    (->> (sort-by second node-numbers)
-         (map first) ;list of pairs to list of ids
-         (map loading)
-         (mapcat (juxt :x :y)))))
-
-(defn load-> 
-  [structure loading]
-  (let [dof-keys (-> nd/fixities (:dimm structure) (:type))]
-   (->> (:nodes structure)
-        (map :id)
-        (map loading)
-        (mapcat (apply juxt dof-keys)))))
-
-(defn element-load->nodal-loads
-  [elem loading]
-  (let [L (el/length elem)
-        L260 (/ (* L L) 60)
-        w0 (:w0 loading)
-        wL (:wL loading)
-        P0 (* (/ L 20) (+ (* 7 w0) (* 3 wL)))
-        M0 (* L260 (+ (* 3 w0) (* 2 wL)))
-        PL (* (/ L 20) (+ (* 3 w0) (* 7 wL)))
-        ML (* L260 (+ (* 2 w0) (* 3 wL)))]
-   [{(:SN-id elem) {:Px 0 :Py P0 :Mz M0}}
-    {(:EN-id elem) {:Px 0 :Py PL :Mz ML}}]))
 
 (defn boundary-conditions
   [structure]
@@ -119,7 +80,7 @@
 (defn solve
   "Solve structural system"
   [structure loading]
-  (let [reducedF (reduced-F (loading->vector structure loading) (free-DoF structure))
+  (let [reducedF (reduced-F (ld/F structure loading) (free-DoF structure))
         reducedK (reduced-K structure)]
     (lin/solve reducedK reducedF)))
 
@@ -147,9 +108,9 @@
 (def truss (Truss nodes elements))
 
 (def loading
-  {(:id a) {:Px 0 :Py 0}
-   (:id b) {:Px 8660 :Py 5000}
-   (:id c) {:Px 0 :Py 0}})
+  [(ld/NodalLoad (:id a) 0 0)
+   (ld/NodalLoad (:id b) 8660 5000)
+   (ld/NodalLoad (:id c) 0 0)])
 
 ;; {node-id 
 ;;   {:type :nodal-load 

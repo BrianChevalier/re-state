@@ -13,7 +13,8 @@
    :SN-id (:id SN)
    :EN-id (:id EN)
    :mat mat
-   :xs xs})
+   :xs xs
+   :id (gensym)})
 
 (def test-elem 
   {:type :Element
@@ -150,3 +151,10 @@
      (stiffness elem)
      [[l m (- l) (- m)]]
      (m/select displacements (DoF elem)))))
+
+(defn with-nodes
+  "Look up and insert nodes into element from the truss"
+  [elem truss]
+  (assoc elem
+         :SN (get (nd/by-uuid (:nodes truss)) (:SN-id elem))
+         :EN (get (nd/by-uuid (:nodes truss)) (:EN-id elem))))

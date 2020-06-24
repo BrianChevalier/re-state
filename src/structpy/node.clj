@@ -19,24 +19,21 @@
    Includes the associated names and nDoF per node"
   {:2D
    {:Truss
-    {:names [:x :y]
-     :force-names [:Px :Py]
+    {:dof-names [:x :y]
      :ndof 2
      :free [1 1]
      :pin [0 0]
      :xroller [1 0]
      :yroller [0 1]}
     :Beam
-    {:names [:y :θz]
-     :force-names [:Py :Mz]
+    {:dof-names [:y :θz]
      :ndof 2
      :free [1 1]
      :pin [0 1]
      :fixed [0 0]
      :xroller [0 1]}
     :Frame
-    {:names [:x :y :θz]
-     :force-names [:Px :Py :Mz]
+    {:dof-names [:x :y :θz]
      :ndof 3
      :free [1 1 1]
      :pin [0 0 1]
@@ -45,12 +42,12 @@
      :fixed [0 0 0]}}
    :3D
    {:Truss
-    {:names [:x :y :z]
+    {:dof-names [:x :y :z]
      :ndof 3
      :free [1 1 1]
      :pin [0 0]}}
    :Frame
-   {:names [:x :y :z :θz :θy :θx]
+   {:dof-names [:x :y :z :θz :θy :θx]
     :ndof 6
     :free [1 1 1 1 1 1]
     :fixed [0 0 0 0 0 0]}})
@@ -99,3 +96,8 @@
  (let [ndof (nDoF node)]
   (for [i (range ndof)]
     (+ (* ndof (:index node)) i))))
+
+(defn by-uuid
+  "Take a list of nodes (or elements) and return a map keyed by nodal id"
+  [nodes]
+  (into {} (map (juxt :id identity) nodes)))
