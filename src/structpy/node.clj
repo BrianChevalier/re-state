@@ -88,7 +88,7 @@
   (-> fixities
       (get (:dimm node))
       (get (:structure-type node))
-      (:ndof)))
+      :ndof))
 
 (defn DoF
   "The degree of freedom numbering for a node"

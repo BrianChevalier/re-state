@@ -155,6 +155,12 @@
 (defn with-nodes
   "Look up and insert nodes into element from the truss"
   [elem truss]
-  (assoc elem
-         :SN (get (nd/by-uuid (:nodes truss)) (:SN-id elem))
-         :EN (get (nd/by-uuid (:nodes truss)) (:EN-id elem))))
+  (let [SN (get (nd/by-uuid (:nodes truss)) (:SN-id elem))
+        EN (get (nd/by-uuid (:nodes truss)) (:EN-id elem))
+        dimm (:dimm SN)
+        structure-type (:structure-type SN)]
+   (assoc elem
+          :SN SN
+          :EN EN
+          :structure-type structure-type
+          :dimm dimm)))

@@ -15,21 +15,24 @@
   [E]
   {:E E})
 
-(defn get-node-numbers
-  [nodes]
-  (->> nodes
-       (map-indexed
-        (fn [index node] {(:id node) index}))
-       vec
-       (into {})))
-
 ;; TRUSS
 (defn Truss
   [nodes elements]
-  {:node-numbers (get-node-numbers nodes)
-   :nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
+  {:nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
    :elements elements
    :type :Truss})
+
+(defn Beam
+  [nodes elements]
+  {:nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
+   :elements elements
+   :type :Beam})
+
+(defn Frame
+  [nodes elements]
+  {:nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
+   :elements elements
+   :type :Beam})
 
 (defn nDoF
   "Count the number of degrees of freedom for a structure"

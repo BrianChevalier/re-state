@@ -6,7 +6,7 @@
             [clojure.pprint]))
 
 (defn NodalLoad
-  "Create a new nodal node"
+  "Create a new nodal force"
   ([node-id Px Py]
    (NodalLoad node-id Px Py 0))
   
@@ -18,7 +18,9 @@
     :Pz (or Pz 0)}))
 
 (defn ElementDistributedLoad
-  ""
+  "w0: magnitude at start node
+   wL: magnitude at end node
+   dir: direction of force"
   [elem-id w0 wL dir]
   {:type :Element-load
    :elem-id elem-id
@@ -27,7 +29,9 @@
    :dir dir})
 
 (defn ElementPointLoad
-  "a: distance from start node"
+  "a: distance from start node
+   P: magnitude of the force
+   dir: direction of force"
   [elem-id P a dir]
   {:type :Element-load
    :elem-id elem-id
@@ -58,27 +62,40 @@
        (get (:structure-type thing))
        (get (:type thing))))
 
+(defn apply-order
+  "Return a vector based on the order of functions in `order` if they are
+   keywords, getting values from `dict`
+   The default value is 0 instead of nil.
+   
+   => (apply-order [:c :b :a] {:a 2 :b 1})
+   [0 1 2]"
+  [order dict]
+  (println order dict)
+  ((apply juxt order) dict 0))
+
 (defmulti resolve-load
   "Resolve the load to a vector placed at either the Node or Elem DoF"
   (fn [_ thing] (:type thing)))
 
 (defmethod resolve-load :Node
-  [load- node]
-  ((apply juxt (get-order node))
-   load-))
+  [load- _] load-)
 
 (defmethod resolve-load :Element ;; distributed global-y
+  ;; Returns dictionary
   [load- elem]
   (let [L (el/length elem)
         L260 (/ (* L L) 60)
         w0 (:w0 load-)
         wL (:wL load-)]
-    ((apply juxt (get-order elem))
      {:P0 (* (/ L 20) (+ (* 7 w0) (* 3 wL)))
       :M0 (* L260 (+ (* 3 w0) (* 2 wL)))
       :PL (* (/ L 20) (+ (* 3 w0) (* 7 wL)))
-      :ML (* L260 (+ (* 2 w0) (* 3 wL)))}
-     0)))
+      :ML (* L260 (+ (* 2 w0) (* 3 wL)))}))
+
+(defn to-vector
+  "Take elem or node, resolve to dict, then order."
+  [load- thing]
+  (apply-order (get-order thing) (resolve-load load- thing)))
 
 (defn DoF
   "Dispatch either nodal or element DoF numbering"
@@ -87,14 +104,6 @@
     {:Node nd/DoF
      :Element el/DoF}
     (:type thing)) thing))
-
-(defn add-f
-  [F load-thing]
-  (let [[load- thing] load-thing
-        dof (DoF thing)]
-    (m/set-selection F dof
-                    (m/add (m/matrix (m/select F dof))
-                           (m/matrix (resolve-load load- thing))))))
 
 (defn nDoF
   "Count the number of degrees of freedom for a structure"
@@ -106,7 +115,11 @@
   {:Nodal-load (fn [structure load-]
                  [load-
                   (get (nd/by-uuid (:nodes structure))
-                       (get load- :node-id))])})
+                       (get load- :node-id))])
+   :Element-load (fn [structure load-]
+                   [load-
+                    (el/with-nodes (get (nd/by-uuid (:elements structure))
+                          (get load- :elem-id)) structure)])})
 
 (defn juxt-loads
   "juxt the load map next to the node or element"
@@ -116,47 +129,17 @@
        loads))
 
 
+(defn add-f
+  [F load-thing]
+  (let [[load- thing] load-thing
+        dof (DoF thing)]
+    (m/set-selection F dof
+                     (m/add (m/matrix (m/select F dof))
+                            (m/matrix (to-vector load- thing))))))
 (defn F
+  "Create a system loading vector based on a 
+   sequence of loads for a structure"
   [structure loads]
   (reduce add-f 
           (m/zero-array [(nDoF structure)]) 
           (juxt-loads structure loads)))
-
-
-;; Testing variables
-(def a (nd/Node 0 0 :fixity :pin))
-(def b (nd/Node 3 4))
-(def c (nd/Node 6 0 :fixity :pin))
-
-(def nodes [a b c])
-
-(def elements
-  [(el/Element a b {:E 200e9} (XS/Generic-Section 0.01))
-   (el/Element b c {:E 200e9} (XS/Generic-Section 0.01))])
-
-(def truss {:type :Truss 
-            :nodes (vec (map-indexed (fn [index node] (assoc node :index index)) nodes))
-            :elements elements})
-
-(def loading
-  [(NodalLoad (:id a) 0 0)
-   (NodalLoad (:id b) 8660 5000)
-   (NodalLoad (:id c) 0 0)])
-
-
-;; (defn loading->vector
-;;   [structure loading]
-;;   (let [{:keys [node-numbers]} structure]
-;;     (->> (sort-by second node-numbers)
-;;          (map first) ;list of pairs to list of ids
-;;          (map loading)
-;;          (mapcat (juxt :x :y)))))
-
-;; (defn load->
-;;   [structure loading]
-;;   (let [dof-keys (-> nd/fixities (:dimm structure) (:type))]
-;;     (->> (:nodes structure)
-;;          (map :id)
-;;          (map loading)
-;;          (mapcat (apply juxt dof-keys)))))
-
