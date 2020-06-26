@@ -15,8 +15,9 @@
 
 (defn Generic-Section
   "A generic cross section"
-  [A]
+  [A & {:keys [Ix] :or {Ix nil}}]
   {:Area A
+   :Ix Ix
    :type :Generic-Section})
 
 ;; Compute area of each shape type

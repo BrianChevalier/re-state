@@ -34,8 +34,20 @@
 
 ;; Beam loading
 
-(def a1 (nd/Node 0 0 :structure-type :Beam))
-(def b1 (nd/Node 10 0 :structure-type :Beam))
-(def elements1 (el/Element a1 b1 {:E 200e9} (XS/Generic-Section 1)))
+(def q 0.1)
+(def L 144)
+(def E 29000)
+(def I 555)
+
+(def a1 (nd/Node 0 0 :fixity :fixed :structure-type :Beam))
+(def b1 (nd/Node L 0 :fixity :free :structure-type :Beam))
+(def elements1 (el/Element a1 b1 {:E E} (XS/Generic-Section 1 :Ix I)))
 (def beam (co/Frame [a1 b1] [elements1]))
-(def load- [(ld/ElementDistributedLoad (:id elements1) 1 0 :global-y)])
+(def load- [(ld/ElementDistributedLoad (:id elements1) q q :global-y)])
+
+(println (/ (* q L L) (* 6 E I)))
+(println (/ (* q L L L L) (* 8 E I)))
+;; (println (* (/ L 20) (+ (* 7 q) (* 3 q))))
+;; (println (* (/ (* L L) 60) (+ (* 3 q) (* 2 q))))
+
+(co/solve beam load-)

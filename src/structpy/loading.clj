@@ -1,4 +1,5 @@
 (ns structpy.loading
+  (:refer-clojure :exclude [load])
   (:require [clojure.core.matrix :as m]
             [structpy.cross-sections :as XS]
             [structpy.node :as nd]
@@ -53,6 +54,14 @@
    {:Truss 
     {:Node [:Px :Py :Pz]}}})
 
+;; {
+;;  {:dimm 2 :type :Truss} {:order {
+;;                                  :Node [:Px :Py]} 
+;;                          :fixities {:free [0 0]
+;;                                     :pin [1 1]}}
+;;  {:dimm 2 :type :Truss} [:Px :Py]
+;; }
+
 (defn get-order
   "Look up the force order for node or element
    (e.g. [:Px :Py :Pz])"
@@ -70,7 +79,6 @@
    => (apply-order [:c :b :a] {:a 2 :b 1})
    [0 1 2]"
   [order dict]
-  (println order dict)
   ((apply juxt order) dict 0))
 
 (defmulti resolve-load
@@ -90,20 +98,18 @@
      {:P0 (* (/ L 20) (+ (* 7 w0) (* 3 wL)))
       :M0 (* L260 (+ (* 3 w0) (* 2 wL)))
       :PL (* (/ L 20) (+ (* 3 w0) (* 7 wL)))
-      :ML (* L260 (+ (* 2 w0) (* 3 wL)))}))
+      :ML (* -1 L260 (+ (* 2 w0) (* 3 wL)))}))
 
 (defn to-vector
   "Take elem or node, resolve to dict, then order."
   [load- thing]
   (apply-order (get-order thing) (resolve-load load- thing)))
 
+(def thing->DoF {:Node nd/DoF :Element el/DoF})
 (defn DoF
   "Dispatch either nodal or element DoF numbering"
   [thing]
-  ((get 
-    {:Node nd/DoF
-     :Element el/DoF}
-    (:type thing)) thing))
+  ((thing->DoF (:type thing)) thing))
 
 (defn nDoF
   "Count the number of degrees of freedom for a structure"
@@ -130,11 +136,11 @@
 
 
 (defn add-f
-  [F load-thing]
+  [F-current load-thing]
   (let [[load- thing] load-thing
         dof (DoF thing)]
-    (m/set-selection F dof
-                     (m/add (m/matrix (m/select F dof))
+    (m/set-selection F-current dof
+                     (m/add (m/matrix (m/select F-current dof))
                             (m/matrix (to-vector load- thing))))))
 (defn F
   "Create a system loading vector based on a 

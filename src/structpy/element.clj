@@ -8,8 +8,6 @@
   "Create a new Element map"
   [SN EN mat xs]
   {:type :Element
-   :SN nil ; resolved by truss functions
-   :EN nil
    :SN-id (:id SN)
    :EN-id (:id EN)
    :mat mat
@@ -115,6 +113,9 @@
         [l m] [(m/mget vec 0) (m/mget vec 1)]]
     [[l m 0 0]
      [0 0 l m]]))
+
+(defmethod transform [:2D :Beam]
+  [_] 1)
 
 (defmethod transform [:2D :Frame]
   [elem]
