@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.1"] 
                  [net.mikera/core.matrix "0.62.0"]
-                 [net.mikera/vectorz-clj "0.48.0"]]
+                 [net.mikera/vectorz-clj "0.48.0"]
+                 [rm-hull/infix "0.3.3"]
+                 [djblue/portal "0.6.1"]]
   :main ^:skip-aot structpy.core
-  :repl-options {:init-ns structpy.core}
-  :aliases	{"clojupyter" ["run" "-m" "clojupyter.cmdline"]})
+  :repl-options {:init-ns structpy.core})
