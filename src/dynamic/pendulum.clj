@@ -45,7 +45,7 @@
   "Takes a system and state and returns a new state"
   [system state]
   (let [{:keys [residual tangent tolerance dt]} system
-        {:keys [t_n a_n+1]} state
+        {:keys [t_n a_n+1]}                     state
         new (merge state {:v_n+1 (vnew system state)
                           :x_n+1 (xnew system state)
                           :t_n+1 (+ t_n dt)})
@@ -57,25 +57,40 @@
       {:a_n a_n+1 :a_n+1 a_n+1 ;;initial guess for next iteration
        :v_n (:v_n+1 new)
        :x_n (:x_n+1 new)
-       :t_n (:t_n+1 new)}
+       :t_n (:t_n+1 new)
+       :n (inc (:n new))}
       (new-state system (merge new {:a_n+1 a_n+1})))))
 
-(defn done? [system state]
-  (let [t_f (:t_f system)
-        t_n (:t_n state)]
-    (< t_n t_f)))
+(defn initial-state [system]
+  (let [{:keys [t_0 x_0 v_0]} system
+        a_0 ((:a_0 system) system)]
+    {:n 0
+     :t_n t_0
+     :x_n x_0
+     :v_n v_0
+     :a_n a_0
+     :a_n+1 a_0}))
 
 (defn states
-  "returns vector of x, (f x), (f (f x))"
+  "returns lazy sequence of x, (f x), (f (f x))
+   :neglect-state? decide whether to keep a state item
+   :write-state a function that takes in a state map and
+                returns the new representation of that state. i.e., 
+                is there something that needs to be computed based 
+                on state such as energy"
   [system]
-  (let [{:keys [t_0 x_0 v_0]} system
-        initial-state {:t_n t_0
-                       :x_n x_0
-                       :v_n v_0
-                       :a_n ((:a_0 system) system)
-                       :a_n+1 ((:a_0 system) system)}]
-    (vec (take-while (partial done? system)
-                     (iterate (partial new-state system) initial-state)))))
+  (let [neglect-state? (fn [state] ;; which states to throw out
+                         (not= 0 (rem (:n state) 5)))
+        t_n<t_f        (fn [state] ;; when to stop iterating
+                         (< (:t_n state)
+                            (:t_f system)))
+        write-state    (fn [state] ;; hook to change what's stored in each state
+                         (dissoc state :a_n+1))]
+    (->> (initial-state system)
+         (iterate (partial new-state system))
+         (take-while t_n<t_f)
+         (remove neglect-state?)
+         (map write-state))))
 
 (def pendulum
   {:gravity  9.81
@@ -95,3 +110,10 @@
    :tangent  tangent
    :residual residual
    :a_0      a_0})
+
+(comment
+  (require '[portal.api :as p])
+  (p/open)
+  (p/tap)
+  (p/clear)
+  (tap> (states pendulum)))
