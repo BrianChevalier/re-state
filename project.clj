@@ -7,6 +7,7 @@
                  [net.mikera/core.matrix "0.62.0"]
                  [net.mikera/vectorz-clj "0.48.0"]
                  [rm-hull/infix "0.3.3"]
-                 [djblue/portal "0.6.1"]]
+                 [djblue/portal "0.6.1"]
+                 [metasoarous/oz "1.6.0-alpha30"]]
   :main ^:skip-aot structpy.core
   :repl-options {:init-ns structpy.core})
