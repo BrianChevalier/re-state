@@ -1,0 +1,13 @@
+{:source-paths ["src"]
+ :dev-http {8080 "resources"}
+ :dependencies [[reagent "0.10.0"]]
+ :builds
+ {:app
+  {:asset-path "."
+   :output-dir "resources"
+   :target :browser
+   :compiler-options
+   {:infer-externs true
+    :warnings-as-errors true}
+   :modules {:main {:init-fn app.main/main!}}
+   :devtools {:after-load app.main/reload!}}}}

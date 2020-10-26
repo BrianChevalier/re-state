@@ -14,3 +14,8 @@ pom.xml.asc
 /out*
 .cpcache*
 .calva/*
+node_modules/*
+.shadow-cljs/*
+public/*
+resources/*
+!resources/index.html

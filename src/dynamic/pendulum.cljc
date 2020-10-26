@@ -1,19 +1,18 @@
 (ns dynamic.pendulum)
 
 (defn sin [x]
-  #?(:clj (Math/sin x)
-     :cljs (js/Math.sin x)))
+  #?(:clj (Math/sin x) :cljs (js/Math.sin x)))
 
 (defn cos [x]
-  #?(:clj (Math/cos x)
-     :cljs (js/Math.cos x)))
+  #?(:clj (Math/cos x) :cljs (js/Math.cos x)))
 
 (defn abs [x]
-  #?(:clj (Math/abs x)
-     :cljs (js/Math.abs x)))
+  #?(:clj (Math/abs x) :cljs (js/Math.abs x)))
 
-(def pi #?(:clj Math/PI
-           :cljs js/Math.PI))
+(defn sqrt [x]
+  #?(:clj (Math/sqrt x) :cljs (js/Math.sqrt x)))
+
+(def pi #?(:clj Math/PI :cljs js/Math.PI))
 
 (defn ** [x] (* x x))
 ;; Xo driving-amplitude
@@ -41,8 +40,8 @@
 (defn a_0 [system]
   (let [{:keys [t_0 x_0 phi gravity L Omega Xo]} system
         a (* (/ 3 2) (/ (* Xo Omega Omega) L))
-        b (* (sin (* Omega t_0)) (sin (- x_0 phi)))
-        c (* (/ 3 2) (/ gravity L) (cos x_0))]
+        b (* (sin (* Omega t_0)) (cos (- x_0 phi)))
+        c (* (/ 3 2) (/ gravity L) (sin x_0))]
     (- (* a b) c)))
 
 (defn vnew [system state]
@@ -106,7 +105,7 @@
                             (:t_f system)))]
     (->> (initial-state system)
          (iterate (partial new-state system))
-         (take-while t_n<t_f)
+         ;;(take-while t_n<t_f)
          (remove neglect-state?)
          (map (fn [state]
                 (dissoc state :a_n+1))))))
@@ -135,29 +134,29 @@
    :encoding {:x {:field x-key :type :quantitative}
               :y {:field y-key :type :quantitative}}})
 
-(defn draw-state [state]
-  state)
-
 (defn derived-state [system state]
   (let [{:keys [L Xo Omega phi]} system
-        {:keys [t_n x_n]} state]
+        {:keys [t_n x_n]} state
+        x (* Xo (sin (* Omega t_n)) (cos phi))
+        y (* Xo (sin (* Omega t_n)) (sin phi))]
     (assoc state
-           :pendulum-hinge {:x (* Xo (cos (* Omega t_n)) (cos phi))
-                            :y (* Xo (sin (* Omega t_n)) (sin phi))}
-           :pendulum-tip {:x (* L (sin x_n))
-                          :y (* -1 L (cos x_n))}
+           :system system
+           :pendulum-hinge {:x x
+                            :y y}
+           :pendulum-tip {:x (+ x (* L (sin x_n)))
+                          :y (+ y (* -1 L (cos x_n)))}
            :kinetic (kinetic system state)
            :potential (potential system state))))
 
 (def pendulum
   {:gravity  9.81
    :mass     2.0
-   :w 1
-   :L        1
-   :phi      0
-   :Omega    1
-   :Xo       0
-   :x_0      (/ pi 2)
+   :w        1
+   :L        5
+   :phi      (/ pi 4)
+   :Omega    (sqrt (/ (* 1.5 9.81) 5))
+   :Xo       1
+   :x_0      0 ;;(/ pi 2)
    :v_0      0
    :t_0      0
    :t_f      20
@@ -171,6 +170,9 @@
    :plot [{:title "Energy vs. time"
            :layer [(line-plot :t_n :kinetic)
                    (line-plot :t_n :potential)]}
+          {:title "Phase Portrait"
+           :mark :line
+           }
           {:title "Angle vs. time"
            :mark :line
            :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
