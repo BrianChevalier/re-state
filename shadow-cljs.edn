@@ -10,4 +10,5 @@
    {:infer-externs true
     :warnings-as-errors true}
    :modules {:main {:init-fn app.main/main!}}
-   :devtools {:after-load app.main/reload!}}}}
+   :devtools {:after-load app.main/reload!
+              :preloads   [cljs.user]}}}}

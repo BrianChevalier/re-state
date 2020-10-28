@@ -17,7 +17,8 @@
    {thheller/shadow-cljs {:mvn/version "2.11.5"}}
    :main-opts ["-m" "shadow.cljs.devtools.cli"]}
   :dev
-  {:extra-deps
+  {:extra-paths ["dev"]
+   :extra-deps
    {cider/cider-nrepl {:mvn/version "0.23.0"}
     nrepl/nrepl {:mvn/version "0.8.2"}
     djblue/portal {:mvn/version "0.6.2"}}}}}
