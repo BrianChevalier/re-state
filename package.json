@@ -8,5 +8,8 @@
     "vega": "^5.17.0",
     "vega-embed": "^6.12.2",
     "vega-lite": "^4.17.0"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.11.5"
   }
 }
