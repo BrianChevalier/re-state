@@ -4,10 +4,8 @@
             [dynamic.pendulum :as p]
             [oz.core :as oz]
             [math.main :refer [sin cos]]
-            [math.matrix :as mat]))
-
-(comment
-  (js/alert ""))
+            [math.matrix :as mat]
+            [dynamic.core :as dy]))
 
 (defn deep-merge [a & maps]
   (if (map? a)
@@ -22,7 +20,7 @@
               {:data {:values (vec data)}}))
 
 (def data (map (partial p/derived-state p/pendulum)
-               (p/states p/pendulum)))
+               (dy/states p/pendulum)))
 
 (defonce state (r/atom (cycle data)))
 
@@ -65,7 +63,7 @@
   [:<>
    (for [vega (:plot p/pendulum)]
      [oz/vega-lite (plot vega (map (partial p/derived-state p/pendulum)
-                                   (p/states p/pendulum)))])])
+                                   (dy/states p/pendulum)))])])
 
 (defn app []
   [:div
