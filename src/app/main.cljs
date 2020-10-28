@@ -3,7 +3,11 @@
             [reagent.dom :as dom]
             [dynamic.pendulum :as p]
             [oz.core :as oz]
-            [math.main :refer [sin cos]]))
+            [math.main :refer [sin cos]]
+            [math.matrix :as mat]))
+
+(comment
+  (js/alert ""))
 
 (defn deep-merge [a & maps]
   (if (map? a)
@@ -41,7 +45,7 @@
   (let [{:keys [pendulum-hinge pendulum-tip system]} state]
     [:div
      [:div (pr-str (str (:t_n state)))]
-     [:svg {:height "100vh" :width "100vw"}
+     [:svg
       [:g {:transform "scale(10, -10) translate(10 -10)"}
        [plane system]
        [:circle {:cx 0 :cy 0 :r 0.3 :stroke :black}]
@@ -65,8 +69,8 @@
 
 (defn app []
   [:div
-   [:h1 "Driven Pendulum"]
-   [plots]
+   [:h1 " Pendulum"]
+   ;;[plots]
    [draw-state (first @state)]])
 
 (defn render []
