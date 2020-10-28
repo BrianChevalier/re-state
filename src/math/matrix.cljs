@@ -4,30 +4,8 @@
    [clojure.core.matrix.implementations :as imp]
    [clojure.core.matrix.protocols :as proto]
    ["mathjs" :as m]
-   [clojure.core.matrix :as core]))
-
-(def mat (m/matrix
-          (clj->js [[1 2]
-                    [3 4]
-                    [4 5]])))
-
-(comment
-  (core/mget (m/matrix (clj->js [[[20 1]]])) 0 0 2)
-  (.subset mat (m/index [0 1]))
-  (m/row mat 2)
-  (tap> mat)
-  (core/shape mat)
-  (core/dimensionality mat)
-  (core/vec? (m/matrix (clj->js [0 1 2])))
-  (core/vec? mat)
-  (core/dimension-count mat 0)
-  (core/mget mat 2 0)
-  (aget (.size mat) 0)
-  (-> mat)
-  (m/row mat 1)
-  (m/row mat 0)
-  (.subset mat (m/index 0 0))
-  (+ 1 2 3))
+   [clojure.core.matrix :as core]
+   [clojure.core.matrix.linear :as lin]))
 
 (extend-type m/Matrix
   Datafiable
@@ -67,21 +45,36 @@
   (get-2d [m row column]
     (-> m (m/row row) (m/column column)))
   (get-nd [m indexes]
-    (m/subset m (apply m/index indexes))))
+    (m/subset m (apply m/index indexes)))
 
-#_(let [num-cols (aget (.size m) 1)
-        index-range (m/index (m/range 0 num-cols) row)]
-    (.subset m index-range))
-  ;; proto/PNorm
-  ;; (norm [m p]
-;;   #_(cond
-  ;;     ((number? p) (m/norm m))))
+  proto/PIndexedSetting
+  (set-1d [m row v])
+  (set-2d [m row column v])
+  (set-nd [m indexes v])
+  (is-mutable? [m])
 
-;; proto/PSolveLinear
-
-(comment
-  (aget (.size mat) 1))
+  proto/PSolveLinear
+  (solve [a b]
+    (m/lusolve a b)))
 
 (imp/register-implementation (m/zeros 2 2))
+(core/set-current-implementation (m/zeros 2 2))
 
-(core/set-current-implementation :mathjs)
+(def mat (core/matrix
+          [[1 2]
+           [3 4]
+           [4 5]]))
+
+(comment
+  (-> mat)
+  (tap> mat)
+  (type mat)
+  (core/mget (core/matrix [[[20 1]]]) 0 0 1)
+  (core/shape mat)
+  (core/dimensionality mat)
+  (core/vec? (core/matrix [0 1 2]))
+  (core/vec? mat)
+  (core/dimension-count mat 0)
+  (core/mget mat 2 0)
+  (lin/solve (core/matrix [[-2, 3], [2, 1]])
+             (core/matrix [11, 9])))
