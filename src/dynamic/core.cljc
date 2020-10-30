@@ -50,7 +50,6 @@
         A     (tangent system new)
         a_n+1 (- a_n+1 (solve g A))
         newton-it (inc (get state :newton-it 0))]
-    (tap> (solve g A))
     (cond
       (> newton-it 30)
       (throw (js/Error. "failed to converge"))

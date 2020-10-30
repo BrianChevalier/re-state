@@ -120,11 +120,6 @@
                       :y {:field :v_n :axis {:title "velocity (rad/s)"}}}}]})
 
 (comment
-  (require '[portal.api :as p])
-  (p/open)
-  (p/tap)
-  (p/clear)
-  #_(tap> (vec (dy/states pendulum)))
   ;;plotting
   (require '[oz.core :as oz])
   (oz/start-server!)

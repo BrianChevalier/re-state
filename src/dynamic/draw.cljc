@@ -47,8 +47,7 @@
    [circle tip]
    [circle hinge]])
 
-(defn double-pendulum [state]
-  (let [{:keys [pendulum-hinge pendulum-tip1 pendulum-tip2]} state]
+(defn double-pendulum [hinge tip1 tip2]
     [:<>
-     [pendulum pendulum-hinge pendulum-tip1]
-     [pendulum pendulum-tip1 pendulum-tip2]]))
+     [pendulum hinge tip1]
+     [pendulum tip1 tip2]])

@@ -18,12 +18,12 @@
   (if (some nil? values)
     (throw (js/Error. "Nil value in collection!"))))
 
-(defn constants [system]
+(defn const [system]
   (let [{:keys [L W gravity P beta dt]} system
         [L1 L2] L
         [W1 W2] W
         eta (* dt (- 1 beta))
-        _ (any-nil? [L1 L2 gravity W1 W2 P beta dt eta beta])
+        ;;_ (any-nil? [L1 L2 gravity W1 W2 P beta dt eta beta])
         ]
     {:a (* L1
            (+ (* (/ 1 2) W1) W2 P))
@@ -39,6 +39,8 @@
            W2)
      :eta eta
      :zeta (** eta)}))
+
+(def constants (memoize const))
 
 (defn residual [system state]
   (let [{:keys [k]}             system
@@ -128,16 +130,22 @@
            [A21 A22]]
         a_0 (lin/solve (core/matrix A)
                        (core/matrix g))
-        _ (any-nil? [A11 A12 A21 A22 k x_0 v_0 g1 g2 a_0])
-        ]
+        _ (any-nil? [A11 A12 A21 A22 k x_0 v_0 g1 g2 a_0])]
     a_0))
 
-(defn draw-state [state]
+
+(defn draw-state [system state]
+  (let [[L1 L2] (:L system)
+        [[x1] [x2]] (:x_n state)
+        tip1 {:x (* L1 (sin x1))
+              :y  (* L1 (cos x1))}
+        tip2 {:x (+ (* L1 (sin x1)) (* L2 (sin x2)))
+              :y (+ (* L1 (cos x1)) (* L2 (cos x2)))}]
     [:div
      [:div (str (:t_n state))]
      [d/canvas
       [d/circle {:x 0 :y 0}]
-      [d/double-pendulum state]]])
+      [d/double-pendulum {:x 0 :y 0} tip1 tip2]]]))
 
 (defn double-pendulum
   ":L Lenth
@@ -159,7 +167,7 @@
   (double-pendulum
    {:L [10 10]
     :W [1  1]
-    :k [0 10]
+    :k [0 0]
     :P 1.15
     :t_f 40
     :beta 0.5

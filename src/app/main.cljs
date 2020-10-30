@@ -1,11 +1,13 @@
 (ns app.main
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
+            [reagent-forms.core :as forms]
             #_[dynamic.pendulum :as p]
-            [math.main :refer [cos sin]]
+            [math.main :refer [cos sin pi]]
             [dynamic.doublependulum :as p2]
-            [oz.core :as oz]
+            #_[oz.core :as oz]
             [dynamic.core :as dy]
+            [clojure.core.matrix :as core]
             [math.matrix]))
 
 (defn deep-merge [a & maps]
@@ -20,29 +22,21 @@
               spec
               {:data {:values (vec data)}}))
 
-(def L1 (first (:L p2/benchmark)))
-(def L2 (second (:L p2/benchmark)))
-
-(defn tip1 [state]
-  (let [[[x1] _] (:x_n state)]
-    {:x (* L1 (sin x1))
-    :y  (* L1 (cos x1))}))
-
-(defn tip2 [state]
-  (let [[[x1] [x2]] (:x_n state)]
-    {:x (+ (* L1 (sin x1)) (* L2 (sin x2)))
-     :y (+ (* L1 (cos x1)) (* L2 (cos x2)))}))
+(def params (r/atom {}))
 
 (def data
-    (map #(assoc %
-                :pendulum-hinge {:x 0 :y 0}
-                :pendulum-tip1 (tip1 %)
-                :pendulum-tip2 (tip2 %)) (dy/states p2/benchmark)))
-
-(comment
-  (-> data second)
-  (-> data)
-  )
+  (dy/states
+   (p2/double-pendulum (merge {:L [10 10]
+                               :W [1  1]
+                               :k [0 0]
+                               :P 1.15
+                               :t_f 40
+                               :beta 0.5
+                               :gravity 9.81
+                               :dt 0.01
+                               :x_0 (core/matrix [[(/ pi 100)] [(/ pi 100)]])
+                               :v_0 (core/matrix [[0] [0]])}
+                              @params))))
 
 (defonce state (r/atom (cycle data)))
 
@@ -58,11 +52,29 @@
      [oz/vega-lite (plot vega (map (partial p/derived-state p/pendulum)
                                    (dy/states p/pendulum)))])])
 
+(defn row [label input]
+  [:div
+   [:div [:label label]]
+   [:div input]])
+
+(def form-template
+  [:div
+   (row "k1" [:input {:field :numeric :id :k1}])
+   (row "k1" [:input {:field :numeric :id :k1}])
+   (row "k2" [:input {:field :numeric :id :k2}])])
+
+(defn form []
+    (fn []
+      [:div
+       [forms/bind-fields form-template params]
+       [:label (str @params)]]))
+
 (defn app []
   [:div
    [:h1 " Pendulum"]
+   [form]
    ;;[plots]
-   [(:draw-state p2/benchmark) (first @state)]])
+   [(:draw-state p2/benchmark) p2/benchmark (first @state)]])
 
 (defn render []
   (dom/render [app]
