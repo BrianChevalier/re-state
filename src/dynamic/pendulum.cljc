@@ -1,6 +1,7 @@
 (ns dynamic.pendulum
-  (:require [math.main :refer [sin cos ** abs pi]]
-             #_[dynamic.core :refer []]))
+  (:require [math.main :refer [sin cos ** pi]]
+            [dynamic.core :as dy]
+            [dynamic.draw :as d]))
 
 
 (defn residual [system state]
@@ -71,6 +72,17 @@
            :kinetic T
            :potential U)))
 
+(defn draw-state [state]
+  (let [{:keys [pendulum-hinge pendulum-tip system]} state]
+    [:div
+     [:div (str (:t_n state))]
+     [d/canvas
+      [d/plane (:phi system) {:scale 10}]
+      [d/circle {:x 0 :y 0}]
+      [d/pendulum pendulum-hinge pendulum-tip]]]))
+
+#_(map (partial p/derived-state p/pendulum)
+     (dy/states p/pendulum))
 
 (def pendulum
   {:gravity  9.81
@@ -82,15 +94,14 @@
    :Xo       2.1
    :x_0      0 ;;(/ pi 2)
    :v_0      0
-   :t_0      0
    :t_f      100
    :dt       0.01
    :beta     0.5
    :tolerance 1e-7
-   :integration-method :GTR
    :tangent  tangent
    :residual residual
    :a_0      a_0
+   :draw-state draw-state
    :plot [{:title "Energy vs. time"
            :layer [(line-plot :t_n :kinetic)
                    (line-plot :t_n :potential)
@@ -113,7 +124,7 @@
   (p/open)
   (p/tap)
   (p/clear)
-  (tap> (vec (states pendulum)))
+  #_(tap> (vec (dy/states pendulum)))
   ;;plotting
   (require '[oz.core :as oz])
   (oz/start-server!)
@@ -134,4 +145,4 @@
              #_[:ul (for [[k v] pendulum] [:li (str k v)])]
              (for [vega (:plot pendulum)]
                [:vega-lite (plot vega (map (partial derived-state pendulum)
-                                           (states pendulum)))])]))
+                                           (dy/states pendulum)))])]))

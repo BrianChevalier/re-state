@@ -1,11 +1,12 @@
 (ns app.main
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
-            [dynamic.pendulum :as p]
+            #_[dynamic.pendulum :as p]
+            [math.main :refer [cos sin]]
+            [dynamic.doublependulum :as p2]
             [oz.core :as oz]
-            [math.main :refer [sin cos]]
-            [math.matrix :as mat]
-            [dynamic.core :as dy]))
+            [dynamic.core :as dy]
+            [math.matrix]))
 
 (defn deep-merge [a & maps]
   (if (map? a)
@@ -19,47 +20,39 @@
               spec
               {:data {:values (vec data)}}))
 
-(def data (map (partial p/derived-state p/pendulum)
-               (dy/states p/pendulum)))
+(def L1 (first (:L p2/benchmark)))
+(def L2 (second (:L p2/benchmark)))
+
+(defn tip1 [state]
+  (let [[[x1] _] (:x_n state)]
+    {:x (* L1 (sin x1))
+    :y  (* L1 (cos x1))}))
+
+(defn tip2 [state]
+  (let [[[x1] [x2]] (:x_n state)]
+    {:x (+ (* L1 (sin x1)) (* L2 (sin x2)))
+     :y (+ (* L1 (cos x1)) (* L2 (cos x2)))}))
+
+(def data
+    (map #(assoc %
+                :pendulum-hinge {:x 0 :y 0}
+                :pendulum-tip1 (tip1 %)
+                :pendulum-tip2 (tip2 %)) (dy/states p2/benchmark)))
+
+(comment
+  (-> data second)
+  (-> data)
+  )
 
 (defonce state (r/atom (cycle data)))
-
-(defn circle [x y]
-  [:circle {:cx x :cy y :r 0.1 :fill :white :stroke :black}])
-
-(defn plane [system]
-  (let [{:keys [phi]} system
-        x1 (* -10 (cos phi))
-        y1 (* -10 (sin phi))
-        x2 (* 10  (cos phi))
-        y2 (* 10  (sin phi))]
-    [:line {:stroke :grey
-            :x1 x1
-            :y1 y1
-            :x2 x2
-            :y2 y2}]))
-
-(defn draw-state [state]
-  (let [{:keys [pendulum-hinge pendulum-tip system]} state]
-    [:div
-     [:div (pr-str (str (:t_n state)))]
-     [:svg
-      [:g {:transform "scale(10, -10) translate(10 -10)"}
-       [plane system]
-       [:circle {:cx 0 :cy 0 :r 0.3 :stroke :black}]
-       [:line {:style {:stroke "red" :stroke-width "1"}
-               :x1 (:x pendulum-hinge) :y1 (:y pendulum-hinge)
-               :x2 (:x pendulum-tip) :y2 (:y pendulum-tip)}]
-       [circle (:x pendulum-tip) (:y pendulum-tip)]
-       [circle (:x pendulum-hinge) (:y pendulum-hinge)]]]]))
 
 (defn update-loop []
   (swap! state #(or (rest %) data)))
 
 (defn interval-loop []
-  (js/setInterval #(update-loop) 10))
+  (js/setInterval #(update-loop) 1))
 
-(defn plots []
+#_(defn plots []
   [:<>
    (for [vega (:plot p/pendulum)]
      [oz/vega-lite (plot vega (map (partial p/derived-state p/pendulum)
@@ -69,7 +62,7 @@
   [:div
    [:h1 " Pendulum"]
    ;;[plots]
-   [draw-state (first @state)]])
+   [(:draw-state p2/benchmark) (first @state)]])
 
 (defn render []
   (dom/render [app]

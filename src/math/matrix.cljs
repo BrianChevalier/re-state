@@ -65,6 +65,10 @@
   (solve [a b]
     (m/lusolve a b))
 
+  proto/PMatrixScaling
+  (scale [m constant] (m/dotMultiply m constant))
+  (pre-scale [m constant] (m/dotMultiply m constant))
+
   proto/PSetSelection
   (set-selection [a args values])
 
@@ -76,7 +80,7 @@
 
   proto/PMatrixAdd
   (matrix-add [m a] (m/add m a))
-  (matrix-sub [m a] (m/sub m a))
+  (matrix-sub [m a] (m/subtract m a))
 
   proto/PNegation
   (negate [m] (m/unaryMinus m))
@@ -114,7 +118,7 @@
   (diagonal-matrix [m diagonal-values] (m/diag diagonal-values))
 
   proto/PNorm
-  (norm [m p])
+  (norm [m p] (m/norm m p))
 
   proto/PMathsFunctions
   (abs [m] (m/abs m))
@@ -137,18 +141,91 @@
   (tan [m] (m/tan m))
   (tanh [m] (m/tanh m))
   (to-degrees [m] (m/dotMultiply m (/ 180 js/Math.PI)))
-  (to-radians [m] (m/dotMultiply m (/ js/Math.PI 180))))
+  (to-radians [m] (m/dotMultiply m (/ js/Math.PI 180)))
+
+
+  ASeq
+  ISeq
+  (-first [m]
+    (-> m
+        .toArray
+        js->clj
+        first))
+  (-rest [m]
+    (-> m
+        .toArray
+        js->clj
+        rest)
+    #_(let [nRows (-> m .size first)]
+        (for [row (range 1 nRows)]
+          (-> (m/row m row)
+              .toArray
+              js->clj))))
+
+  ISeqable
+  (-seq [m] m)
+
+  #_proto/PBroadcast
+  #_(broadcast [m target-shape]
+               (cond
+      ;; 1-d array reshape
+                 (= (-> m .size .-length) 1)
+                 (m/reshape m (clj->js target-shape))
+                 :else (throw (js/Error. (str "Could not broadcast to target shape: " target-shape)))))
+
+  #_proto/PBroadcastLike
+  #_(broadcast-like [m a]
+                    (m/reshape m a))
+
+  proto/PCoercion
+  (coerce-param [m param]
+    (m/matrix (clj->js param)))
+
+  proto/PReshaping
+  (reshape [m shape] (m/reshape (m/clone m) shape))
+
+  proto/PConversion
+  (convert-to-nested-vectors [m]
+    (vec (seq m))))
 
 (imp/register-implementation (m/zeros 2 2))
 (core/set-current-implementation (m/zeros 2 2))
 
-(def mat (core/matrix
-          [[1 2]
-           [3 4]
-           [4 5]]))
+(def mat
+  (core/matrix
+   [[1 2]
+    [3 4]
+    [4 5]]))
+
+(defn blah []
+  (for [row mat]
+    (for [col row] (str col))))
+
+(def mat2 (core/matrix [0 1])) ;2
+
+(defn broadcast [m new-shape] ; 2, 1
+  (let [m (m/clone m)]
+    (cond
+    ;; 1-d array reshape
+     (= (-> m .size .-length) 1)
+     (m/reshape m (clj->js new-shape))
+     :else (throw (js/Error. (str "Could not broadcast to target shape " new-shape))))))
 
 (comment
+  (-> (core/matrix [[1 3] [2 3] [3 3]])
+      first)
+  (first (core/matrix [[0] [0]]))
   (-> mat)
+  (m/transpose mat)
+  (-> mat2 .size .-length)
+  (core/dimensionality mat2)
+  (broadcast mat2 [2 1])
+  (= 2 (first (.size mat2)))
+  (m/reshape mat2 #js [2 1])
+  (-> mat seq)
+  (-> mat first)
+  (core/e* 1 (core/get-row
+              (core/matrix [[1 2] [3 4]]) 0))
   (core/identity-matrix 3)
   (core/sub mat)
   (tap> mat)
@@ -169,4 +246,6 @@
            (core/matrix [[1 2] [3 4]]))
   (core/sin (core/matrix [1 1]))
   (lin/solve (core/matrix [[-2, 3], [2, 1]])
-             (core/matrix [11, 9])))
+             #js [11 9])
+  (core/sub (core/matrix [1 1])
+            (core/matrix [[1] [1]])))

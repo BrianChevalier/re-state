@@ -4,4 +4,6 @@
 (p/tap)
 
 (comment
-  (def portal (p/open)))
+  (p/open)
+  (def portal (p/open))
+  (tap> "bls"))
