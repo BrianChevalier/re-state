@@ -1,10 +1,10 @@
 (ns dynamic.draw
   (:require [math.main :refer [sin cos]]))
 
-(defn canvas [& content]
+(defn canvas [view-box & content]
   ;; x, y, width, height
   [:center
-   [:svg {:view-box "0 -5 25 25"
+   [:svg {:view-box view-box
           :width "90%" :height "auto"
           :preserveAspectRatio "xMidYMid meet"}
     (into [:g ;;translate (10 -50)
@@ -44,6 +44,9 @@
              :y1 y1
              :x2 x2
              :y2 y2}])))
+
+(defn draw-time [_ state]
+  [:div (str (.toFixed (or (:t_n state) 0) 2))])
 
 (defn pendulum [hinge tip]
   [:<>

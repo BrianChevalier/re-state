@@ -68,20 +68,22 @@
 (defn draw-state [system state]
   (let [L (reductions + (:L system)) ;;cumulative sum
         x (:x_n state)
-        uuids (range 4)]
+        uuids (range 4)
+        scale (or (:scale system) 10)
+        width (* 1.2 (reduce + (:L system)))]
     [:div
-     [:div (.toFixed (or (:t_n state) 1) 2)]
-     [d/canvas
+     [:div (.toFixed (or (:t_n state) 0) 2)]
+     [d/canvas (str "0 -5 " width " 10") ;;"0 -5 25 10"
       (for [[L-1 [x-1] L [x] uuid] (map vector (concat [0] L) (concat [[0]] x) L x uuids)]
         ^{:key (str uuid "rect")}
         [:<>
-         [rect-from-center {:x (+ L (* 10 x)) :y 0} 3 3]
+         [rect-from-center {:x (+ L (* scale x)) :y 0} 3 3]
          [spring
-          {:x (+ L-1 (* 10 x-1)) :y 0}
-          {:x (+ L (* 10 x)) :y 0} (- x x-1)]])
+          {:x (+ L-1 (* scale x-1)) :y 0}
+          {:x (+ L (* scale x)) :y 0} (- x x-1)]])
       (for [[L [x] uuid] (map vector L x uuids)]
         ^{:key (str uuid "circle")}
-        [:circle {:cx (+ L (* 10 x)) :cy 0 :r 0.35 :fill "white" :stroke "black" :stroke-width "0.1"}])]]))
+        [:circle {:cx (+ L (* scale x)) :cy 0 :r 0.35 :fill "white" :stroke "black" :stroke-width "0.1"}])]]))
 
 (def benchmark
   {:x_0 [0.0516 0.0516 0 -0.0516]
@@ -110,6 +112,7 @@
    :mass [5 5 5 5]
    :k [50 50 50 50]
    :L [5 5 5 5]
+   :scale 10
    :residual residual
    :tangent tangent
    :a_0 a_0
@@ -123,6 +126,7 @@
    {:key :mass :type :numeric-vector}
    {:key :amplitudes :type :numeric-vector}
    {:key :frequencies :type :numeric-vector}
+   {:key :scale :type :numeric}
    {:key :t_f :type :numeric}
    {:key :dt :type :numeric}
    {:key :beta :type :numeric}])
@@ -131,4 +135,6 @@
   {:title
    "Four Degree of Freedom System"
    :description
-   [:p "This is a four Degree of Freedom (DoF) system"]})
+   [:div
+    [:p "This is a four Degree of Freedom (DoF) system"]
+    [:p "Red: Tension, Blue: compression, Black: neither"]]})

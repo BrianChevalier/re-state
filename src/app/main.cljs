@@ -4,7 +4,7 @@
             #_[reagent-forms.core :as forms]
             #_[dynamic.pendulum :as p]
             #_[math.main :refer [cos sin pi]]
-            #_[dynamic.doublependulum :as p2]
+            ;;[dynamic.doublependulum :as sys]
             [dynamic.nDoF :as sys]
             #_[oz.core :as oz]
             [dynamic.core :as dy]

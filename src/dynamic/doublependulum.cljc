@@ -108,8 +108,8 @@
   (let [{:keys [a b c d e]} (-> system constants)
         {:keys [k x_0 v_0]}   system
         [k1 k2] k
-        [[x1] [x2]] x_0
-        [[v1] [v2]] v_0
+        [x1 x2] x_0
+        [v1 v2] v_0
         cosx2-x1 (cos (- x2 x1))
         sinx2-x1 (sin (- x2 x1))
         A11 c
@@ -140,10 +140,13 @@
         tip1 {:x (* L1 (sin x1))
               :y  (* L1 (cos x1))}
         tip2 {:x (+ (* L1 (sin x1)) (* L2 (sin x2)))
-              :y (+ (* L1 (cos x1)) (* L2 (cos x2)))}]
+              :y (+ (* L1 (cos x1)) (* L2 (cos x2)))}
+        width (* 2.2 (+ L1 L2))
+        position (* -1 (/ width 2))
+        ]
     [:div
-     [:div (str (:t_n state))]
-     [d/canvas
+     [d/draw-time system state]
+     [d/canvas (str position " " position " " width " " width)
       [d/circle {:x 0 :y 0}]
       [d/double-pendulum {:x 0 :y 0} tip1 tip2]]]))
 
@@ -176,8 +179,37 @@
     :x_0 (core/matrix [[(/ pi 100)] [(/ pi 100)]])
     :v_0 (core/matrix [[0] [0]])}))
 
-(comment
-  (core/matrix [0 0])
-  (-> benchmark a_0)
-  (second (dy/states benchmark))
-  (core/identity-matrix 2))
+(def default-system
+  {:L [10 10]
+   :W [1  1]
+   :k [50 50]
+   :P 1.0
+   :t_f 40
+   :beta 0.5
+   :gravity 9.81
+   :dt 0.01
+   :x_0 [(/ pi 100) (/ pi 100)]
+   :v_0 [0 0]
+   :residual residual
+   :tangent tangent
+   :a_0 a_0
+   :draw-state draw-state})
+
+(def controls
+  [{:key :x_0 :type :numeric-vector}
+   {:key :v_0 :type :numeric-vector}
+   {:key :k :type :numeric-vector}
+   {:key :L :type :numeric-vector}
+   {:key :W :type :numeric-vector}
+
+   {:key :gravity :type :numeric}
+   {:key :P :type :numeric}
+   {:key :t_f :type :numeric}
+   {:key :dt :type :numeric}
+   {:key :beta :type :numeric}])
+
+(def metadata
+  {:title
+   "Inverted Double Pendulum"
+   :description
+   [:p "This is a two degree of freedom inverted double pendulum."]})
