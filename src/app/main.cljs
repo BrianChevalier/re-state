@@ -1,17 +1,21 @@
 (ns app.main
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
-            #_[reagent-forms.core :as forms]
-            #_[dynamic.pendulum :as p]
-            #_[math.main :refer [cos sin pi]]
-            ;;[dynamic.doublependulum :as sys]
-            [dynamic.nDoF :as sys]
+            [dynamic.pendulum :as p]
+            [dynamic.doublependulum :as double]
+            [dynamic.nDoF :as nDoF]
             #_[oz.core :as oz]
             [dynamic.core :as dy]
             [math.matrix]))
 
+(def selections {:pendulum p/app-data
+                 :nDoF nDoF/app-data
+                 :double-pendulum double/app-data})
+
+(defonce user-selection (r/atom {:selection :double-pendulum}))
+
 (defonce system
-  (r/atom sys/default-system))
+  (r/atom (-> @user-selection :selection selections :system)))
 
 (defonce state (r/atom (cycle (dy/states @system))))
 
@@ -69,7 +73,7 @@
                    :numeric numeric-input} (:type param))]
        ^{:key (:key param)} [:tr [input (:key param) ato]]))
    
-   [:tr [:td {:colspan "5"}
+   [:tr [:td {:colSpan "5"}
          [:button {:on-click #(reset! state (cycle (dy/states @ato)))
                    :style {:background-color "#4CAF50"
                            :color "white"
@@ -82,11 +86,20 @@
 
 (defn app []
   [:div
-   [:h1 (:title sys/metadata)]
-   (:description sys/metadata)
+   [:select {:value (-> @user-selection :selection name)
+             :on-change (fn [e]
+                          (let [value (-> e .-target .-value keyword)]
+                            (swap! user-selection assoc :selection value)
+                            (reset! system (-> selections value :system))
+                            (reset! state (cycle (dy/states @system)))))}
+    [:option {:value "double-pendulum"} "Double Pendulum"]
+    [:option {:value "pendulum"} "Driven Pendulum"]
+    [:option {:value "nDoF"} "nDoF"]]
+   [:h1 (-> @user-selection :selection selections :metadata :title)]
+   (-> @user-selection :selection selections :metadata :description)
    [:div {:style {:padding "20px"
                   :font-size "1.2rem"}}
-    [control-table sys/controls system]]
+    [control-table (-> @user-selection :selection selections :controls) system]]
    ;;[plots]
    [:div {:style {:border "2px solid black"
                   :border-radius "10px"}}

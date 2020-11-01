@@ -213,3 +213,8 @@
    "Inverted Double Pendulum"
    :description
    [:p "This is a two degree of freedom inverted double pendulum."]})
+
+(def app-data
+  {:controls controls
+   :metadata metadata
+   :system default-system})

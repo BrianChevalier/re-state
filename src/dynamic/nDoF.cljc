@@ -138,3 +138,7 @@
    [:div
     [:p "This is a four Degree of Freedom (DoF) system"]
     [:p "Red: Tension, Blue: compression, Black: neither"]]})
+
+(def app-data {:system default-system
+               :controls controls
+               :metadata metadata})

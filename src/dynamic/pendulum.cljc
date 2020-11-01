@@ -72,11 +72,19 @@
            :kinetic T
            :potential U)))
 
-(defn draw-state [state]
-  (let [{:keys [pendulum-hinge pendulum-tip system]} state]
+(defn draw-state [system state]
+  (let [{:keys [t_n x_n]} state
+        {:keys [L Xo Omega phi]} system
+        x (* Xo (sin (* Omega t_n)) (cos phi))
+        y (* Xo (sin (* Omega t_n)) (sin phi))
+        pendulum-hinge {:x x :y y}
+        pendulum-tip {:x (+ x (* L (sin x_n)))
+                      :y (+ y (* -1 L (cos x_n)))}
+        width (* 2.2 L)
+        position (* -1 (/ width 2))]
     [:div
-     [:div (str (:t_n state))]
-     [d/canvas
+     [d/draw-time system state]
+     [d/canvas (str position " " position " " width " " width)
       [d/plane (:phi system) {:scale 10}]
       [d/circle {:x 0 :y 0}]
       [d/pendulum pendulum-hinge pendulum-tip]]]))
@@ -118,6 +126,50 @@
            :mark :line
            :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
                       :y {:field :v_n :axis {:title "velocity (rad/s)"}}}}]})
+
+(def default-system
+  {:gravity  9.81
+   :mass     2.0
+   :w        2
+   :L        10
+   :phi      (/ pi 3)
+   :Omega    1.213;;(sqrt (/ (* 1.5 9.81) 5))
+   :Xo       2.1
+   :x_0      0 ;;(/ pi 2)
+   :v_0      0
+   :t_f      60
+   :dt       0.01
+   :beta     0.5
+   :tolerance 1e-7
+   :tangent  tangent
+   :residual residual
+   :a_0      a_0
+   :draw-state draw-state})
+
+(def controls
+  [{:key :x_0 :type :numeric}
+   {:key :v_0 :type :numeric}
+
+   {:key :L :type :numeric}
+   {:key :w :type :numeric}
+   {:key :Xo :type :numeric}
+   {:key :phi :type :numeric}
+   {:key :Omega :type :numeric}
+   {:key :gravity :type :numeric}
+   {:key :t_f :type :numeric}
+   {:key :dt :type :numeric}
+   {:key :beta :type :numeric}])
+
+(def metadata
+  {:title
+   "Driven Pendulum"
+   :description
+   [:div
+    [:p "This "]]})
+
+(def app-data {:system default-system
+               :controls controls
+               :metadata metadata})
 
 (comment
   ;;plotting
