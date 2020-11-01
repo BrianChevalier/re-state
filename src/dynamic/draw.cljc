@@ -2,9 +2,13 @@
   (:require [math.main :refer [sin cos]]))
 
 (defn canvas [& content]
-  [:svg {:view-box "0 0 100 100"}
-   (into [:g
-          {:transform "scale(1, -1) translate(50 -50)"}] content)])
+  ;; x, y, width, height
+  [:center
+   [:svg {:view-box "0 -5 25 25"
+          :width "90%" :height "auto"
+          :preserveAspectRatio "xMidYMid meet"}
+    (into [:g ;;translate (10 -50)
+           {:transform "scale(1, -1)"}] content)]])
 
 (defn circle
   ([m]

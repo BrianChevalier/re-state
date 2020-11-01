@@ -111,14 +111,14 @@
   proto/PMatrixOps
   (trace [m] (m/trace m))
   (determinant [m] (m/det m))
-  (inverse [m] (m/inv m))
+  (inverse [m] (m/inv (m/clone m)))
 
   proto/PSpecialisedConstructors
   (identity-matrix [m dims] (m/identity dims))
-  (diagonal-matrix [m diagonal-values] (m/diag diagonal-values))
+  (diagonal-matrix [m diagonal-values] (core/matrix (m/diag (clj->js diagonal-values))))
 
   proto/PNorm
-  (norm [m p] (m/norm m p))
+  (norm [m p] (m/norm (m/squeeze (m/clone m)) p))
 
   proto/PMathsFunctions
   (abs [m] (m/abs m))
@@ -182,7 +182,7 @@
     (m/matrix (clj->js param)))
 
   proto/PReshaping
-  (reshape [m shape] (m/reshape (m/clone m) shape))
+  (reshape [m shape] (m/reshape (m/clone m) (clj->js shape)))
 
   proto/PConversion
   (convert-to-nested-vectors [m]

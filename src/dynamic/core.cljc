@@ -3,9 +3,11 @@
   (:require [math.main :refer [abs]]
             [clojure.core.matrix :as mat]
             [clojure.core.matrix.linear :as lin]
-            [clojure.core.matrix.operators :refer [* + -]]))
+            [clojure.core.matrix.operators :refer [* + -]]
+            [dynamic.protocols :refer [valid-system? valid-state?]]))
 
 (comment
+  (lin/norm [1 2 3])
   (+ (mat/matrix [[0 1]])
            (mat/matrix [[1 0]]))
   (+ 1 2))
@@ -68,6 +70,12 @@
 (defn initial-state [system]
   (let [{:keys [t_0 x_0 v_0]} system
         a_0 ((:a_0 system) system)
+        x_0 (if (vector? x_0)
+              (mat/reshape (mat/matrix x_0) [(count x_0) 1])
+              x_0)
+        v_0 (if (vector? v_0)
+              (mat/reshape (mat/matrix v_0) [(count v_0) 1])
+              v_0)
         state {:n 0
                :t_n t_0
                :x_n x_0
@@ -80,6 +88,8 @@
   "returns lazy sequence of x, (f x), (f (f x))
    :neglect-state? decide whether to keep a state item"
   [system]
+  (println system)
+  (valid-system? system)
   (let [defaults {:t_0 0
                   :dt 0.01
                   :beta 0.5
@@ -87,7 +97,7 @@
                   :method :GTR}
         system (merge defaults system)
         neglect-state? (fn [state] ;; which states to throw out
-                         (not= 0 (rem (:n state) 1)))
+                         (not= 0 (rem (:n state) 5)))
         t_n<t_f        (fn [state] ;; when to stop iterating
                          (< (:t_n state)
                             (:t_f system)))]

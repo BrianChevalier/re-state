@@ -1,84 +1,99 @@
 (ns app.main
   (:require [reagent.core :as r]
             [reagent.dom :as dom]
-            [reagent-forms.core :as forms]
+            #_[reagent-forms.core :as forms]
             #_[dynamic.pendulum :as p]
-            [math.main :refer [cos sin pi]]
-            [dynamic.doublependulum :as p2]
+            #_[math.main :refer [cos sin pi]]
+            #_[dynamic.doublependulum :as p2]
+            [dynamic.nDoF :as sys]
             #_[oz.core :as oz]
             [dynamic.core :as dy]
-            [clojure.core.matrix :as core]
             [math.matrix]))
 
-(defn deep-merge [a & maps]
-  (if (map? a)
-    (apply merge-with deep-merge a maps)
-    (apply merge-with deep-merge maps)))
+(defonce system
+  (r/atom sys/default-system))
 
-(defn plot [spec data]
-  (deep-merge {:mark "line"}
-              {:encoding {:x {:type "quantitative"}
-                          :y {:type "quantitative"}}}
-              spec
-              {:data {:values (vec data)}}))
-
-(def params (r/atom {}))
-
-(def data
-  (dy/states
-   (p2/double-pendulum (merge {:L [10 10]
-                               :W [1  1]
-                               :k [0 0]
-                               :P 1.15
-                               :t_f 40
-                               :beta 0.5
-                               :gravity 9.81
-                               :dt 0.01
-                               :x_0 (core/matrix [[(/ pi 100)] [(/ pi 100)]])
-                               :v_0 (core/matrix [[0] [0]])}
-                              @params))))
-
-(defonce state (r/atom (cycle data)))
+(defonce state (r/atom (cycle (dy/states @system))))
 
 (defn update-loop []
-  (swap! state #(or (rest %) data)))
+  (swap! state #(or (rest %) (cycle (dy/states @system)))))
 
 (defn interval-loop []
-  (js/setInterval #(update-loop) 1))
+  (js/setInterval #(update-loop) (* 0.01 5 1000)))
 
-#_(defn plots []
+(defn number-input
+  "This is a numeric input field with local state that only propogates
+   model changes when the input is a valid number"
+  [value _]
+  (let [state (r/atom value)]
+    (fn [_ on-change]
+      [:td
+       [:input {:style {:width "60px"
+                        :font-family "'Roboto', sans-serif"
+                        :font-size "0.9rem"}
+                :value @state
+                :type :number
+                :on-change (fn [e]
+                             (let [value (-> e .-target .-value)
+                                   parsed (js/parseFloat value)]
+                               (reset! state value)
+                               (when-not (js/isNaN parsed)
+                                 (on-change parsed))))}]])))
+
+(defn vec-input [k ato]
+  (let [values (k @ato)
+        on-change #(swap! system assoc k %)]
+    ^{:key k} 
+    [:<>
+     [:td [:label (str k)]]
+     (map-indexed
+      (fn [index value]
+        ^{:key index}
+        [:td [number-input value #(->> % (assoc values index) on-change)]])
+      values)]))
+
+(defn numeric-input [k ato]
+  ^{:key k}
   [:<>
-   (for [vega (:plot p/pendulum)]
-     [oz/vega-lite (plot vega (map (partial p/derived-state p/pendulum)
-                                   (dy/states p/pendulum)))])])
+   [:td [:label (str k)]]
+   [:td [number-input (k @ato) #(swap! system assoc k %)]]])
 
-(defn row [label input]
-  [:div
-   [:div [:label label]]
-   [:div input]])
+(defn control-table [params ato]
+  [:table {:style
+           {:border "3px solid grey"
+            :padding "10px"
+            :border-radius "10px"}}
 
-(def form-template
-  [:div
-   (row "k1" [:input {:field :numeric :id :k1}])
-   (row "k1" [:input {:field :numeric :id :k1}])
-   (row "k2" [:input {:field :numeric :id :k2}])])
-
-(defn form []
-    (fn []
-      [:div
-       [forms/bind-fields form-template params]
-       [:label (str @params)]]))
+   (for [param params]
+     (let [input ({:numeric-vector vec-input
+                   :numeric numeric-input} (:type param))]
+       ^{:key (:key param)} [:tr [input (:key param) ato]]))
+   
+   [:tr [:td {:colspan "5"}
+         [:button {:on-click #(reset! state (cycle (dy/states @ato)))
+                   :style {:background-color "#4CAF50"
+                           :color "white"
+                           :border "none"
+                           :border-radius "7px"
+                           :text-align "center"
+                           :font-size "1rem"
+                           :padding "7px 20px"}}
+          "Restart Simulation"]]]])
 
 (defn app []
   [:div
-   [:h1 " Pendulum"]
-   [form]
+   [:h1 (:title sys/metadata)]
+   (:description sys/metadata)
+   [:div {:style {:padding "20px"
+                  :font-size "1.2rem"}}
+    [control-table sys/controls system]]
    ;;[plots]
-   [(:draw-state p2/benchmark) p2/benchmark (first @state)]])
+   [:div {:style {:border "2px solid black"
+                  :border-radius "10px"}}
+    [(:draw-state @system) @system (first @state)]]])
 
 (defn render []
-  (dom/render [app]
-              (js/document.getElementById "root")))
+  (dom/render [app] (js/document.getElementById "root")))
 
 (defn main!
   "Once per app"
@@ -90,3 +105,6 @@
   "On each reload, when the file is saved"
   []
   (render))
+
+(comment
+  (tap> @system))
