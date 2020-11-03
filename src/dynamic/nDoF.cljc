@@ -1,9 +1,11 @@
 (ns dynamic.nDoF
   (:refer-clojure :exclude [* + -])
   (:require [clojure.core.matrix :as core]
+            [clojure.core.matrix.linear :as lin]
             [math.main :refer [**]]
             [clojure.core.matrix.operators :refer [* + -]]
             [math.matrix]
+            ["mathjs" :as m]
             [dynamic.draw :as d]))
 
 
@@ -72,18 +74,18 @@
         scale (or (:scale system) 10)
         width (* 1.2 (reduce + (:L system)))]
     [:div
-     [:div (.toFixed (or (:t_n state) 0) 2)]
-     [d/canvas (str "0 -5 " width " 10") ;;"0 -5 25 10"
-      (for [[L-1 [x-1] L [x] uuid] (map vector (concat [0] L) (concat [[0]] x) L x uuids)]
-        ^{:key (str uuid "rect")}
-        [:<>
-         [rect-from-center {:x (+ L (* scale x)) :y 0} 3 3]
-         [spring
-          {:x (+ L-1 (* scale x-1)) :y 0}
-          {:x (+ L (* scale x)) :y 0} (- x x-1)]])
-      (for [[L [x] uuid] (map vector L x uuids)]
-        ^{:key (str uuid "circle")}
-        [:circle {:cx (+ L (* scale x)) :cy 0 :r 0.35 :fill "white" :stroke "black" :stroke-width "0.1"}])]]))
+     [:div
+      [d/canvas (str "-1 -5 " width " 10") ;;"0 -5 25 10"
+       (for [[L-1 [x-1] L [x] uuid] (map vector (concat [0] L) (concat [[0]] x) L x uuids)]
+         ^{:key (str uuid "rect")}
+         [:<>
+          [rect-from-center {:x (+ L (* scale x)) :y 0} 3 3]
+          [spring
+           {:x (+ L-1 (* scale x-1)) :y 0}
+           {:x (+ L (* scale x)) :y 0} (- x x-1)]])
+       (for [[L [x] uuid] (map vector L x uuids)]
+         ^{:key (str uuid "circle")}
+         [:circle {:cx (+ L (* scale x)) :cy 0 :r 0.35 :fill "white" :stroke "black" :stroke-width "0.1"}])]]]))
 
 (def benchmark
   {:x_0 [0.0516 0.0516 0 -0.0516]
@@ -113,6 +115,9 @@
    :k [50 50 50 50]
    :L [5 5 5 5]
    :scale 10
+   :mode :none
+   :K K
+   :M M
    :residual residual
    :tangent tangent
    :a_0 a_0
@@ -127,6 +132,8 @@
    {:key :amplitudes :type :numeric-vector}
    {:key :frequencies :type :numeric-vector}
    {:key :scale :type :numeric}
+   #_{:key :mode :type :select :options [{:value "none" :label "none"}
+                                       {:value "1" :label "Mode 1"}]}
    {:key :t_f :type :numeric}
    {:key :dt :type :numeric}
    {:key :beta :type :numeric}])
@@ -142,3 +149,21 @@
 (def app-data {:system default-system
                :controls controls
                :metadata metadata})
+
+(comment
+  ;;(mat/reshape (mat/get-column (mat/matrix (:Q (lin/eigen (K system)))) 1) [(count x_0) 1])
+  (-> (m/multiply
+       (m/inv (M default-system)) (K default-system))
+      (m/norm))
+  (m/norm (K default-system))
+  (-> (m/eigs (m/multiply
+            (m/inv (M default-system)) (K default-system)))
+      .-vectors
+      (core/get-column 1)
+      (core/matrix)
+      (core/reshape [4 1])
+      #_(m/divide (-> (m/multiply
+                     (m/inv (M default-system)) (K default-system))
+                    (m/norm)))
+      #_(core/normalise))
+  (core/matrix (core/get-column (:Q (lin/eigen (K default-system))) 1)))  

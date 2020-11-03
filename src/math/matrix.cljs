@@ -120,6 +120,18 @@
   proto/PNorm
   (norm [m p] (m/norm (m/squeeze (m/clone m)) p))
 
+  proto/PVectorOps
+  (vector-dot [a b] (throw (js/Error. "Not implemented")))
+  (length [a] (throw (js/Error. "Not implemented")))
+  (length-squared [a] (throw (js/Error. "Not implemented")))
+  (normalise [a] (m/divide a (m/norm (m/squeeze (m/clone a)) 2)))
+
+  proto/PEigenDecomposition
+  (eigen [m options]
+    (let [out (m/eigs m)]
+      {:Q (.-vectors out)
+       :A (.-values out)}))
+
   proto/PMathsFunctions
   (abs [m] (m/abs m))
   (acos [m] (m/acos m))
@@ -212,6 +224,10 @@
      :else (throw (js/Error. (str "Could not broadcast to target shape " new-shape))))))
 
 (comment
+  
+  (m/norm (clj->js [1 1 2]))
+  (m/divide (clj->js [1 1 2]) 2.4494892)
+  (core/normalise (core/matrix [1 1 2]))
   (-> (core/matrix [[1 3] [2 3] [3 3]])
       first)
   (first (core/matrix [[0] [0]]))

@@ -2,7 +2,7 @@
 
 <head>
   <link href="https://fonts.googleapis.com/css?family=Lato|Roboto:300,400" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     .slider {
 -webkit-appearance: none;
@@ -45,13 +45,24 @@ cursor: pointer;
           border-radius: 4px;
           font-size: 1.1rem;
           margin-bottom: 14px;}  
+          input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
 
+
+
+input[type=number] {
+    -moz-appearance:textfield; /* Firefox */
+}
 p {font-family: 'Roboto', sans-serif;}
 h1 {font-family: 'Roboto', sans-serif;}
 td {font-family: 'Roboto', sans-serif;
 height: 20px;}
-
-body {margin: 0px;}
+code {font-family: 'Roboto Mono', monospace;}
+body {margin: 0px; background-color: #2e3440;}
 </style>
 
 </head>

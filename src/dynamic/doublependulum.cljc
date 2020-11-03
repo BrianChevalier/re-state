@@ -145,7 +145,6 @@
         position (* -1 (/ width 2))
         ]
     [:div
-     [d/draw-time system state]
      [d/canvas (str position " " position " " width " " width)
       [d/circle {:x 0 :y 0}]
       [d/double-pendulum {:x 0 :y 0} tip1 tip2]]]))

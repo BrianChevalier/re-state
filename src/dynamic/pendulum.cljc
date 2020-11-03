@@ -63,7 +63,7 @@
         T (kinetic system state)
         U (potential system state)]
     (assoc state
-           :system system
+           ;;:system system
            :pendulum-hinge {:x x
                             :y y}
            :pendulum-tip {:x (+ x (* L (sin x_n)))
@@ -83,14 +83,13 @@
         width (* 2.2 L)
         position (* -1 (/ width 2))]
     [:div
-     [d/draw-time system state]
      [d/canvas (str position " " position " " width " " width)
       [d/plane (:phi system) {:scale 10}]
       [d/circle {:x 0 :y 0}]
       [d/pendulum pendulum-hinge pendulum-tip]]]))
 
 #_(map (partial p/derived-state p/pendulum)
-     (dy/states p/pendulum))
+       (dy/states p/pendulum))
 
 (def pendulum
   {:gravity  9.81
@@ -109,23 +108,7 @@
    :tangent  tangent
    :residual residual
    :a_0      a_0
-   :draw-state draw-state
-   :plot [{:title "Energy vs. time"
-           :layer [(line-plot :t_n :kinetic)
-                   (line-plot :t_n :potential)
-                   (line-plot :t_n :total-energy)]}
-          {:title "Phase Portrait"
-           :mark :line
-           :layer [(line-plot :x_n :v_n)]
-           }
-          {:title "Angle vs. time"
-           :mark :line
-           :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
-                      :y {:field :x_n :axis {:title "theta (rad)"}}}}
-          {:title "Angular velocity vs. time"
-           :mark :line
-           :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
-                      :y {:field :v_n :axis {:title "velocity (rad/s)"}}}}]})
+   :draw-state draw-state})
 
 (def default-system
   {:gravity  9.81
@@ -167,9 +150,26 @@
    [:div
     [:p "This "]]})
 
+(def plots [{:title {:text "Energy vs. time"}
+             :layer [(line-plot :t_n :kinetic)
+                     (line-plot :t_n :potential)
+                     (line-plot :t_n :total-energy)]}
+            {:title {:text "Phase Portrait"}
+             :mark :line
+             :layer [(line-plot :x_n :v_n)]}
+            {:title {:text "Angle vs. time"}
+             :mark :line
+             :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
+                        :y {:field :x_n :axis {:title "theta (rad)"}}}}
+            {:title {:text "Angular velocity vs. time"}
+             :mark :line
+             :encoding {:x {:field :t_n :axis {:title "Time (s)"}}
+                        :y {:field :v_n :axis {:title "velocity (rad/s)"}}}}])
+
 (def app-data {:system default-system
                :controls controls
-               :metadata metadata})
+               :metadata metadata
+               :plots plots})
 
 (comment
   ;;plotting
