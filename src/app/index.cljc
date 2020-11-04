@@ -4,6 +4,8 @@
   (let [code-url "main.js"
         title "Dynamics Simulator"]
     (str
+     "<!DOCTYPE html>"
+     "<html>"
      "<head>"
      "<title>" title "</title>"
      "<meta charset='UTF-8' />"
@@ -22,7 +24,8 @@
      "<body style=\"margin: 0\">"
      "<div id=\"root\"></div>"
      "<script src=\"" code-url "\"></script>"
-     "</body>")))
+     "</body>"
+     "</html>")))
 
 (defn -main []
   (println (html)))
