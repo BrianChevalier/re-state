@@ -11,4 +11,14 @@
     :warnings-as-errors true}
    :modules {:main {:init-fn app.main/main!}}
    :devtools {:after-load app.main/reload!
-              :preloads   [cljs.user]}}}}
+              :preloads   [cljs.user]}}
+  
+  :demo
+  {:output-dir "target/demo/"
+   :asset-path "."
+   :target :browser
+   :compiler-options
+   {:infer-externs true
+    :warnings-as-errors true}
+   :modules {:main {:init-fn app.main/main!}}
+   :devtools {:after-load app.main/reload!}}}}
