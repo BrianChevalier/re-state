@@ -18,4 +18,3 @@ node_modules/*
 .shadow-cljs/*
 public/*
 resources/*
-!resources/index.html

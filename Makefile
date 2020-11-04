@@ -3,7 +3,10 @@
 node_modules: package.json package-lock.json
 	npm ci
 
-dev: node_modules
+index:
+	bb -cp src -m app.index > resources/index.html
+
+dev: node_modules index
 	clojure -M:core-matrix:dev:cljs:shadow-cljs watch app
 
 resources/main.js:
