@@ -88,9 +88,6 @@
       [d/circle {:x 0 :y 0}]
       [d/pendulum pendulum-hinge pendulum-tip]]]))
 
-#_(map (partial p/derived-state p/pendulum)
-       (dy/states p/pendulum))
-
 (def pendulum
   {:gravity  9.81
    :mass     2.0
@@ -169,7 +166,8 @@
 (def app-data {:system default-system
                :controls controls
                :metadata metadata
-               :plots plots})
+               :plots plots
+               :derived-state derived-state})
 
 (comment
   ;;plotting

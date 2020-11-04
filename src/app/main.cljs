@@ -197,7 +197,9 @@
        [:div {:style {:max-height "500px" :max-width "700px"}}
         [(:draw-state @system) @system (first @state)]]]
     
-       [plots/plots (-> selection :plots) (dy/states @system)]]]))
+       [plots/plots (-> selection :plots) (map (fn [state]
+                                                 ((or (-> selection :derived-state) identity) @system state))
+                                               (dy/states @system))]]]))
 
 (defn render []
   (dom/render [app] (js/document.getElementById "root")))
