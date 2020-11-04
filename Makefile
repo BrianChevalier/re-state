@@ -10,3 +10,6 @@ resources/main.js:
 	clojure -M:cljs:shadow-cljs release client
 
 release: node_modules resources/main.js
+
+demo: release
+	bash build-demo
