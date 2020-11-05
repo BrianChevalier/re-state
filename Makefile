@@ -16,3 +16,14 @@ release: node_modules resources/main.js
 
 demo: release
 	bash build-demo
+
+testdemo: demo
+	git checkout gh-pages
+	open http://0.0.0.0:8000/
+	python -m http.server 8000
+	git checkout main
+
+deploy: demo
+	git checkout gh-pages
+	git push --set-upstream origin gh-pages --force
+	git checkout main
