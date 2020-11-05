@@ -117,6 +117,7 @@
 (defn draw-time [_ state]
   [:div {:style {:color (:number colors)
                  ;;:background-color (:background2 colors)
+                 :font-size "1rem"
                  :font-family "'Roboto Mono', Monospace"}}
    (str (.toFixed (or (:t_n state) 0) 2))])
 

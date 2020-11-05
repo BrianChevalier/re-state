@@ -35,6 +35,10 @@
       height: 20px;}
       code {font-family: 'Roboto Mono', monospace;}
       body {margin: 0px; background-color: #2e3440;}
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        display: none;
+      }
       </style>"
      "</head>"
      "<body style=\"margin: 0\">"

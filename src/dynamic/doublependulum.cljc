@@ -195,11 +195,11 @@
    :draw-state draw-state})
 
 (def controls
-  [{:key :x_0 :type :numeric-vector}
-   {:key :v_0 :type :numeric-vector}
-   {:key :k :type :numeric-vector}
-   {:key :L :type :numeric-vector}
-   {:key :W :type :numeric-vector}
+  [{:key :x_0 :type :numeric-vector :doc "Initial angle of each pendulum in radians"}
+   {:key :v_0 :type :numeric-vector :doc "Initial angular velocity of each pendulum in rad/s"}
+   {:key :k :type :numeric-vector :doc "Stiffness of rotational spring at the origin and connecting joint"}
+   {:key :L :type :numeric-vector :doc "Length of each pendulum"}
+   {:key :W :type :numeric-vector :doc "Total weight of each pendulum"}
 
    {:key :gravity :type :numeric}
    {:key :P :type :numeric}
