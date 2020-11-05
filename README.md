@@ -1,5 +1,5 @@
 # Re-state
-`Re-state` is a Clojure(Script) library in development for computing numerically accurate and reproducible mechanical responses of systems with shared. The core algorithm code is completely shared providing more extensive testing and easier implementation of new problems. Currently, there is support for solving non-linear particle and rigid body dynamic systems.
+`Re-state` is a Clojure(Script) library in development for computing numerically accurate and reproducible mechanical responses of systems. The core algorithm code is completely shared providing more extensive testing and easier implementation of new problems. Currently, there is support for solving non-linear particle and rigid body dynamic systems.
 
 See a demo of this library in action [here](https://brianchevalier.github.io/re-state/index.html).
 
