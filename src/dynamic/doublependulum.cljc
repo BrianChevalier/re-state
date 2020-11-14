@@ -181,7 +181,7 @@
 (def default-system
   {:L [10 10]
    :W [1  1]
-   :k [50 50]
+   :k [0 0]
    :P 1.0
    :t_f 40
    :beta 0.5
